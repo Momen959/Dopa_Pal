@@ -6,6 +6,114 @@ dopaPal is an omnipresent, non-intrusive cognitive companion designed to align r
 
 ---
 
+## 🧭 Product Identity: The Ambient Cognitive Sidekick
+
+dopaPal is **not** a "productivity app," a "to-do list," or a "task manager." Those traditional tools are built for linear, neurotypical brains and inherently rely on shame, pressure, and overwhelming walls of text — the exact triggers that cause task paralysis and executive dysfunction.
+
+dopaPal is an **Ambient Cognitive Sidekick**. Its fundamental identity is failure-neutral, highly adaptive, creative, and companion-led. Every feature, button, visual, and sound in the system filters through this core identity.
+
+### 1. The Three Core Design Pillars
+
+Every feature and layout decision must pass these three strict tests:
+
+#### Pillar A: Anti-Friction Ingestion — Zero "Blank Canvas" Panic
+
+**The Rule:** The user should never be forced to stare at an empty, clinical text form with 10 fields just to add something to their plate.
+
+**How it looks in design:** Ingestion is always conversational, ambient, or interactive. Dragging an item onto the bubble's face, speaking to the Audio Lab, or letting the agent parse a chaotic Jira dump behind the scenes are the default entry points. The system takes on the administrative burden of organization so the user doesn't have to.
+
+#### Pillar B: Failure-Neutral Framing — Zero Shame, Zero Red Badges
+
+**The Rule:** Traditional apps use bright red alerts, exclamation marks, and loud "OVERDUE" text to create artificial urgency. For an ADHD brain, this causes immediate avoidance, guilt, and burnout.
+
+**How it looks in design:** Time is fluid in dopaPal. If a task isn't finished during a sprint, the system never punishes the user. The bubble simply yawns or takes a breath, and the agent recalculates the plan: *"Looks like our calibration was a bit off for today. No big deal, I've re-spaced the steps so we can tackle them comfortably tomorrow."*
+
+#### Pillar C: Radical Visual & Auditory Simplification — The "Fog-of-War"
+
+**The Rule:** Seeing 50 tasks at once triggers a massive cognitive freeze. The system must always have the ability to mask out the noise.
+
+**How it looks in design:** The interface supports extreme density reduction. When a user is in a low energy state, the dashboard drops away entirely. The screen belongs to the animated bubble, displaying only one single, achievable micro-step (e.g., *"Just open the document"*), masking the rest of the mountain until they are ready.
+
+### 2. Cohesive Feature Synergy — How It All Plugs Together
+
+Because the system is an ecosystem companion, features shouldn't feel like separate, disjointed tabs. They flow into one another naturally through the bubble's presence:
+
+```
+                  ┌──────────────────────────────┐
+                  │  "Get to Know You" Onboarding │ (Static Context)
+                  └──────────────┬───────────────┘
+                                 │
+                                 ▼
+                  ┌──────────────────────────────┐
+                  │    Daily State Pulse Check   │ (Dynamic Capacity Score)
+                  └──────────────┬───────────────┘
+                                 │
+                                 ▼
+                  ┌──────────────────────────────┐
+                  │    The Aware Bubble UI       │◄───┐ Updates expression
+                  │ (Main Presence & Interaction)│    │ & limits visibility
+                  └──────┬────────────────┬──────┘    │
+                         │                │           │
+          ┌──────────────┴──────┐  ┌──────┴───────────┴──┐
+          │     Agent Mode      │  │      Ask Mode       │
+          │ (System Execution / │  │ (Support Sanctuary /│
+          │  Jira & Cal Sync)   │  │  ADHD Research Hub) │
+          └──────────────┬──────┘  └─────────────────────┘
+                         │
+                         ▼
+                  ┌──────────────────────────────┐
+                  │      Focus Progression       │
+                  └──────────────┬───────────────┘
+                         │ (Earns Tokens)
+                         ▼
+                  ┌──────────────────────────────┐
+                  │         The Shop             │
+                  │ (Buy Visuals, Themes, Sounds)│
+                  └──────────────┬───────────────┘
+                                 │
+                                 ▼
+                  ┌──────────────────────────────┐
+                  │       The Audio Lab          │
+                  │ (Mix Custom Focus Ambience)  │
+                  └──────────────────────────────┘
+```
+
+### 3. The Identity Checklist for the Engineering & Design Team
+
+As the team builds out features, these explicit guidelines govern how things should look, feel, and sound:
+
+- **Visual Motion:** The bubble shouldn't sit rigidly on top of windows. It should feel smooth, bouncy, and fluid. When the user hovers over it, it should look up curiously. When music plays in the Audio Lab, it should groove.
+- **Sound Design:** Interface sounds should be soft, round, and highly satisfying — like mechanical keyboard thocs, soft wooden clicks, or gentle ambient chimes. Avoid high-pitched digital beeps or harsh alarms for timers.
+- **The Shop Aesthetics:** Purchasing themes or sound layers from the shop should feel like unlocking a reward in a cozy sandbox game. The interface should celebrate the user's progress with playful animations.
+- **The Assistant's Tone:** The conscious AI agent is an ally, a co-pilot, and a friend. It uses encouraging, warm, and structured language. It never talks down to the user or acts like an unyielding corporate manager.
+
+---
+
+## 🎨 Visual & Tone Identity: Cozy, Organic, and Playful
+
+If the app feels like an enterprise tool, the brain treats it like an enterprise obligation. By making it intentionally **fun, creative, and friendly**, it feels like a video game or a cozy sandbox environment.
+
+### 1. The Visual DNA
+
+- **Chubby & Rounded Shapes:** Throw out 90-degree angles. Buttons, panels, and menu cards use heavy, exaggerated corner rounding. Everything should feel soft, bubbly, and physically "clickable" — almost like clay, squishy rubber, or smooth wooden blocks.
+- **Warm, Comforting Color Palettes:** Move away from clinical stark whites and cold corporate blues. The default theme embraces rich, warm tones: soft cream backgrounds, earthy pastels, cozy terracottas, warm sages, or a dark mode that feels like a midnight campfire rather than an IDE.
+- **Tactile Physics & Micro-Bounces:** Elements shouldn't snap linearly. They should have weight and elasticity. When you click a button, it should physically squish downward. When the bubble moves, it should stretch and wobble slightly like a drop of water, giving it a cartoonish, organic life.
+
+### 2. Reimagining Core Features with a Playful Design
+
+- **The Shop & Audio Lab:** The Shop looks like a small, hand-drawn storefront or a cozy vending machine. Unlocking a new sound loop isn't a text confirmation — a physical box drops into view, pops open with a burst of stars, and reveals the new sound icon. The Audio Lab mixer feels like a playful physical instrument: each sound is a cute animated token (a raincloud for rain, a tiny record player for vinyl crackle), and turning the volume up means dragging the token closer to a glowing campfire circle.
+- **The Onboarding & Pulse Check:** Onboarding feels like a playful character-creation screen or a fun personality quiz — choosing your "Primary Domain" involves picking illustrated badges or colorful sticker stamps. The daily check-in is represented by the bubble holding up funny, expressive emotion masks or a row of cozy icons (a drained battery vs. a roaring fire).
+- **The Task List (Sketchbook / Pinboard):** Tasks look like loose sheets of paper pinned to a corkboard, colorful sticky notes on a fridge, or items sitting in a physical tray. When a task is completed, the bubble playfully eats it, stomps on it, or watches it turn into a burst of confetti that physically fuels your token meter for the Shop.
+
+### 3. The Tone of Voice — Your Unfiltered Sidekick
+
+Text across the app strips away all corporate pretense. It uses conversational, lighthearted, and slightly witty copy:
+
+- **Error States:** Instead of *"Error 500: Internal Server Failure"*, the bubble might wear a pair of goofy cardboard box goggles and say, *"Whoops! I lost my grip on the internet. Let me dust myself off and try connecting again!"*
+- **Task Load:** If the user tries to add 20 tasks at once, the bubble might look wide-eyed and sweat a little: *"Whoa there, chief! My arms are only so big. Let's start with three and keep the rest in our back pocket for now, yeah?"*
+
+---
+
 ## Current Repository Shape
 
 The active code is split into two maintained workspaces:
@@ -84,20 +192,21 @@ dopapal_system/
 ---
 
 ## 📖 Table of Contents
-1. [Core Philosophy & Design Rules](#-core-philosophy--design-rules)
-2. [System Architecture](#-system-architecture)
-3. [Comprehensive Feature Set](#-comprehensive-feature-set)
-4. [Data Model](#-data-model)
-5. [Core Runtime Workflows](#-core-runtime-workflows)
-6. [AI & NLP Module Blueprint](#-ai--nlp-module-blueprint)
-7. [PINCH Priority & Scoring Engine](#-pinch-priority--scoring-engine)
-8. [Tech Stack Matrix](#-tech-stack-matrix)
-9. [Project Directory Layout](#-project-directory-layout)
-10. [Environment Configuration](#-environment-configuration)
-11. [Getting Started & Local Setup](#-getting-started--local-setup)
-12. [4-Day Team Implementation Plan](#-4-day-team-implementation-plan)
-13. [API Contract Specifications](#-api-contract-specifications)
-14. [Demo Script & Presentation Guide](#-demo-script--presentation-guide)
+1. [Product Identity](#-product-identity-the-ambient-cognitive-sidekick)
+2. [Visual & Tone Identity](#-visual--tone-identity-cozy-organic-and-playful)
+3. [Core Philosophy & Design Rules](#-core-philosophy--design-rules)
+4. [System Architecture](#-system-architecture)
+5. [Comprehensive Feature Set](#-comprehensive-feature-set)
+6. [Data Model](#-data-model)
+7. [Core Runtime Workflows](#-core-runtime-workflows)
+8. [AI & NLP Module Blueprint](#-ai--nlp-module-blueprint)
+9. [PINCH Priority & Scoring Engine](#-pinch-priority--scoring-engine)
+10. [Tech Stack Matrix](#-tech-stack-matrix)
+11. [Project Directory Layout](#-project-directory-layout)
+12. [Environment Configuration](#-environment-configuration)
+13. [Getting Started & Local Setup](#-getting-started--local-setup)
+14. [API Contract Specifications](#-api-contract-specifications)
+15. [Future Plan](#-future-plan)
 
 ---
 
@@ -426,6 +535,18 @@ flowchart TD
 - **Failure-Neutral:** A page with a missing title or malformed date is logged and skipped; sync continues for all other pages
 - **Background Polling:** Same 15-minute interval as Google; status is checked by the client every 20 seconds to detect new syncs
 
+#### Jira Sync Pipeline
+
+- **OAuth Flow:** `GET /auth/jira/url` → user authorises → `GET /auth/jira/callback` exchanges code for tokens and discovers the cloud ID → encrypted in `integration_tokens`
+- **OAuth Setup:** Register an OAuth 2.0 (3LO) app at [Atlassian Developer Console](https://developer.atlassian.com/console/myapps/) with callback URL `http://localhost:8000/api/v1/auth/jira/callback`, then set `JIRA_CLIENT_ID` and `JIRA_CLIENT_SECRET` in `.env`
+- **API Token Fallback:** For headless/manual setups (no OAuth app), the modal form still accepts instance URL + email + API token
+- **Project Filter:** Optional `jira_project_key` limits sync to a single project
+- **JQL Filter:** Default `assignee = currentUser() AND resolution = Unresolved`; supports custom JQL with `updated >=` for incremental sync
+- **Property Mapping:** Maps Jira fields (summary, duedate, priority, status, labels) to dopaPal task fields
+- **Status Filters:** Configurable resolved statuses, include/exclude status lists
+- **Failure-Neutral:** Per-issue failures (missing title, API errors) are logged and skipped
+- **Background Polling:** Same 15-minute interval as Google/Notion; queries `updated >= last_synced_at`
+
 ---
 
 ## 🤖 AI & NLP Module Blueprint
@@ -751,38 +872,6 @@ If you have Docker Desktop installed, you can launch the backend, postgres, and 
 
 ---
 
-## 📅 4-Day Team Implementation Plan
-
-### Day 1: System Baseline & Base Handshakes
-
-* **Backend Developer 1 (BE1):** Instantiate PostgreSQL containerized database definitions, manage baseline migrations via Alembic, construct the core FastAPI app routing system, and setup Google OAuth integrations.
-* **Backend Developer 2 (BE2):** Construct real-time communication bridges via Redis Pub/Sub channels alongside internal state engine endpoints.
-* **Frontend UI 1 (FE1):** Scaffold the Electron shell runtime environment; configure explicit transparent overlays and assert global hotkey listeners.
-* **Frontend UI 2 (FE2):** Bootstrap the core Control Panel interface, structuring state routing containers and establishing base visual layouts.
-* **AI/NLP Engineer (AI):** Build out the deterministic parser suite (date, effort, interest, title, challenge) and Pydantic schema contracts.
-
-### Day 2: Ingestion Pipelines & Core Business Logic
-
-* **BE1:** Finalize the main structural ingest path and integrate calendar sync engines.
-* **BE2:** Code the core Scheduling Engine logic that consumes the AI module's chunking bounds, and implement the daily state score equation.
-* **FE1:** Bind native OS clipboard capture workflows and audio input processing streams straight to the API injection endpoints.
-* **FE2:** Complete the interactive Task Map tracking dashboard layout, linking execution sliders to target pacing update paths.
-* **AI:** Implement complexity-aware chunking engine and PINCH scoring engine with energy-weighted ranking.
-
-### Day 3: Real-Time Synchronization & UX Enhancements
-
-* **BE1:** Build out the Reward Service tracking frameworks and write seeding scripts for demo state profiles.
-* **BE2:** Wire end-to-end WebSocket updates ensuring live data mutations on the backend push straight to the client layers.
-* **FE1:** Build out the central single-focus card view layout inside the floating overlay, complete with micro-interaction animation effects and Play Mode.
-* **FE2:** Construct multi-theme visual states, map interactive drag-and-drop overrides, and layer reward badges into the control engine dashboard.
-* **AI:** Implement Nvidia Nemotron LLM client, segmentation engine, and chat assistant with auto-task creation.
-
-### Day 4: Integration Testing, Calibration & Rehearsals
-
-* **All Team Assets:** Perform end-to-end testing (Highlight/Voice Capture → Ingestion Processing → Task Sub-division → Floating Card Notification → Checked-off Action → Reward Distribution). Calibrate scoring system metrics, secure clean state baselines, shoot fallback demonstration capture footage, and lock down presentation timing scripts.
-
----
-
 ## 📝 API Contract Specifications
 
 ### 1. Ingest Task Payload
@@ -976,6 +1065,142 @@ source_type: voice
 * **Sync Settings:** `GET /api/v1/sync/notion/settings` — returns merged settings (defaults + stored overrides)
 * **Update Settings:** `PUT /api/v1/sync/notion/settings` — accepts `{ settings: { notion_database_id, property_mapping, sync_filters } }`; deep-merges nested objects
 
+**Jira sync endpoints:**
+* **OAuth URL:** `GET /api/v1/auth/jira/url` — returns `{ url }` for Atlassian OAuth popup
+* **OAuth Callback:** `GET /api/v1/auth/jira/callback` — exchanges code for token, discovers cloud ID
+* **Sync Status:** `GET /api/v1/sync/jira/status` — returns `{ connected, is_expired, last_synced_at }`
+* **Trigger Sync:** `POST /api/v1/sync/jira` — runs a full sync cycle; returns `{ success, issues_fetched, new, skipped_duplicate, skipped_resolved, skipped_excluded, skipped_no_title, failed, synced_at }`
+* **Sync Settings:** `GET /api/v1/sync/jira/settings` — returns merged settings (defaults + stored overrides)
+* **Update Settings:** `PUT /api/v1/sync/jira/settings` — accepts `{ settings: { jira_project_key, jql_filter, property_mapping, sync_filters } }`; deep-merges nested objects
+
+---
+
+## 🔭 Future Plan
+
+> **Origin:** The dopaPal concept was born at the **USAII Hackathon 2026**, evolving from a weekend prototype into the full Ambient Cognitive Sidekick vision outlined below.
+
+The following sections describe forward-looking features and architectural expansions that build on the current system foundation.
+
+---
+
+### 1. Login Flow & Ecosystem Onboarding Architecture
+
+Transforming authentication from a static login step into a functional onboarding and state check ensures the system adapts to the user's workload from the moment they boot it up.
+
+#### Phase 1: The Gateway & Static Footprint (The "Get to Know You" Onboarding)
+
+Instead of treating authentication like a standard web portal, the initial setup acts as an ecosystem orientation:
+
+- **Domain Alignment:** The user defines their primary operational playground (deep academic engineering, creative design, or management). This establishes the global context that the NLP layer references later when parsing raw inputs.
+- **Tool Ecosystem Handshake:** By declaring their active digital toolkit (calendars, project trackers, communication hubs), the user signals exactly where their data live.
+- **Energy Baseline:** Setting a preferred wake time and identifying their typical peak productivity window (night owl vs. early bird) provides a predictable template for the scheduling engine.
+
+#### Phase 2: The Daily Gatekeeper (Active State Pulse Check)
+
+Every morning or at first daily startup, the system intercepts the user with a low-friction, high-impact assessment evaluating three key sliders:
+
+- **Physical Stamina (Energy)**
+- **Cognitive Sharpness (Focus)**
+- **Anxiety / Deadline Overload (Overwhelm)**
+
+These inputs are processed immediately to establish a daily baseline score that governs all downstream behavior.
+
+#### Phase 3: Downstream Impact on Core System
+
+The user's input directly alters interface behavior, task balancing, and selection criteria for the rest of the day:
+
+- **The Burnout Shield (Low State / High Overwhelm):** The system aggressively suppresses complex, high-friction objectives and surfaces low-effort "quick wins" and high-interest hobby items. The user experience shifts to isolate micro-steps, protecting momentum without causing paralysis.
+- **The Steady Momentum (Balanced State):** Standard workflow pacing — tasks are distributed evenly according to deadlines, routines, and context tags.
+- **The Deep Focus Mode (High State / Low Overwhelm):** Maximum cognitive capital is recognized. The system lifts high-complexity, high-challenge objectives into view, minimizing trivial distractions and highlighting deep-work project priorities.
+
+---
+
+### 2. The Aware Bubble Companion
+
+Integrating an animated, expressive face directly into the Floating Bubble UI transforms dopaPal from a silent system utility into a living, ambient companion.
+
+#### Face Design & Dynamic Micro-Expressions
+
+The face is highly stylized, minimalistic, and expressive — clean geometric lines or a playful digital particle face rather than something hyper-complex. States include:
+
+- **The "Good Morning" Wake Up:** On boot, the bubble rubs its eyes or yawns, then brightens up, smiling softly while pulsing gently.
+- **Deep Focus Mode:** The face dons "concentration glasses" or shows determined, narrowed eyes, moving in sync with high energy.
+- **The Burnout Shield Safeguard:** The face shifts to an empathetic, relaxed expression — taking a slow breath to visually prompt the user to match its pacing.
+- **Idle Awareness:** If the user has been stalled too long, the bubble tilts its head, looks at the cursor, or scratches its chin thoughtfully.
+
+#### Friendly Proactive Nudging (Avoiding the "Clippy" Trap)
+
+The bubble follows strict rules of contextual pacing. It speaks only when it has true environmental context or when the user actively engages it:
+
+- **The "Sidekick" Tone:** Frames everything like a peer. Instead of *"You have an overdue assignment"*, it says *"Hey, I noticed this quick task is hanging out. Want to clear it off the board together real quick?"*
+- **Proactive Start-of-Day:** The bubble floats to the upper center of the screen at the user's preferred wake time, tapping softly against the window glass, waiting for a click to open the daily pulse check.
+- **Idea Dropping & Curated Facts:** After a difficult task completion, the bubble beams with excitement, celebrates the win, and drops a fascinating fact from the Interest Vault or a micro-break suggestion.
+
+#### High-Value Ambient Features
+
+**A. "Feed the Bubble" Chaos Capture:** Users drag and drop anything directly onto the bubble's face — a highlighted text snippet, an email, a link, or an image. The bubble physically "swallows" the data, nods appreciatively, and stows it in the background processing pipeline.
+
+**B. Fog-of-War Masking Mode:** When a user is heavily overwhelmed (low daily state score), the bubble expands slightly to mask out the rest of the workspace queue, displaying only the single next micro-step on its body. It locks the user's eyes onto one achievable thing.
+
+**C. Physical "Play Mode" Pacing:** During work sprints, the bubble physically mimics the timer — slowly filling with color like an hourglass, or floating near the active window to celebrate small focus milestones in real time.
+
+---
+
+### 3. AI Agent Mode vs. Ask Mode (The Conscious Companion)
+
+Expanding the AI assistant into a hyperaware agent that natively understands ADHD cognitive friction moves it from a basic chatbot to a protective executive-functioning layer.
+
+#### Ask Mode (The Document & Research Sanctuary)
+
+A calm, low-friction information space that doesn't modify the user's environment — it provides immediate, supportive clarity grounded in trusted ADHD management frameworks:
+
+- If a user experiences task paralysis, they can say *"I'm stuck staring at this screen, my brain feels like fog."*
+- The system pulls from trusted sources to offer high-interest micro-tactics: initiating a "body doubling" visualization, recommending a 5-minute "low-stakes momentum builder," or offering a high-dopamine fact from the Interest Vault.
+
+#### Agent Mode (The Active System Operator)
+
+The functional powerhouse. The assistant has permission to execute actions across the entire application ecosystem through natural conversation:
+
+- **Conversational Manipulation:** *"Hey, clear my schedule for the rest of the afternoon, I'm completely drained."* — the agent instantly shifts to Burnout Shield and updates calendar hooks. *"Take everything we just talked about and break it into three small, zero-stress steps for tomorrow morning."* — the agent dynamically builds task blocks.
+- **System Execution:** The agent seamlessly interfaces with background integrations (Jira, Google Calendar, local task stores), handling administrative weight so the user never navigates complex menus.
+
+#### Dynamic Identity Tracking (Continuous Memory Engine)
+
+The assistant dynamically manages user information, updating its cognitive baseline without human intervention:
+
+```
+[User Statement] ──► "Actually, I work way better at night now, mornings are too loud."
+                          │
+                          ▼
+           [Memory Evaluation Pipeline]
+                          │
+           ├── Identifies conflict with old data ("peak_hours: morning")
+                          │
+                          ▼
+           [Automatic Context Rewrite Engine]
+                          │
+           └── Updates User Profile Document ──► ("peak_hours: night")
+                          │
+                          ▼
+             [Immediate System Realignment]
+             └── Recalibrates daily task recommendation windows live
+```
+
+**The Memory Loop:**
+1. **Perception:** The agent constantly listens for identity markers, workflow shifts, or newly stated goals.
+2. **Evaluation & Reconciliation:** When a user says *"I'm dropping language study, I want to focus on design,"* the memory pipeline identifies the conflict with historical onboarding data.
+3. **Self-Correction:** The agent automatically rewrites the underlying static context, updates profile interests, realigns task selection weights, and acknowledges the change naturally: *"Got it. I've cleared language tracking out of our queue so we can keep our focus entirely on design."*
+
+#### Core ADHD Behavioral Specializations
+
+The assistant's persona guidelines are built on specific neurodivergent-supportive principles:
+
+- **Failure-Neutral Framing:** Never uses red alerts, shaming language, or "overdue" warnings. Frames missed tasks as calibration issues: *"Looks like our capacity prediction was off yesterday. Let's readjust the pacing for today."*
+- **Dopamine-First Task Onboarding:** When breaking down projects, the agent actively ties pieces of the objective to the user's captured interests.
+- **Urgency Mitigation:** When a massive influx of data arrives (e.g., from Jira), the agent acts as an emotional buffer, organizing chaos in the background so the user only sees what matches their current state score.
+
+---
+
 #### Settings JSON Contract (`settings_json` on `integration_tokens`)
 
 **Notion default settings:**
@@ -1007,26 +1232,28 @@ source_type: voice
 }
 ```
 
----
+**Jira default settings:**
+```json
+{
+  "jira_instance_url": "",
+  "jira_email": "",
+  "jira_cloud_id": "",
+  "jira_project_key": "",
+  "jql_filter": "assignee = currentUser() AND resolution = Unresolved",
+  "property_mapping": {
+    "summary": "Summary",
+    "duedate": "Due Date",
+    "priority": "Priority"
+  },
+  "sync_filters": {
+    "ignore_resolved": true,
+    "resolved_statuses": ["Done", "Closed", "Resolved"],
+    "include_statuses": [],
+    "exclude_statuses": []
+  },
+  "synced_issue_ids": [],
+  "last_synced_at": null
+}
+```
 
-## 🎤 Demo Script & Presentation Guide
 
-1. **The Pitch (First 30 Seconds):** Start by addressing the foundational problem: standard productivity software demands high baseline executive functioning just to manage the tool, turning organization into a source of distraction and task avoidance. Introduce `dopaPal` as an ambient, invisible secretary that tracks obligations without creating visual noise or introducing administrative friction.
-
-2. **Frictionless Ingestion Presentation:** Highlight unstructured text directly within a random application window (like a simulated chaotic email exchange). Execute `Ctrl+Shift+Space` and show how the floating bubble intercepts the selection, uses the NLP pipeline to parse the criteria, and logs the sub-divided steps silently behind the scenes without pulling the user away from their current workspace.
-
-3. **Voice Task Capture:** Click the microphone icon in the Bubble's add menu, hold to speak a chaotic task description, release to transcribe and ingest. Show the task appearing in the dashboard with sub-blocks.
-
-4. **Task Segmentation Demo:** Call `POST /api/v1/tasks/segment` with a complex task and display the structured execution plan with micro-steps, behavioral tips, and fog-of-war masking.
-
-5. **State Calibration Display:** Demonstrate the morning boot cycle sequence. Tap a low-energy state score value and show how the overlay interface gracefully adjusts, reducing density boundaries down to a single, actionable micro-step (e.g., *"Open the text document"*).
-
-6. **Play Mode Sprint:** Enter Play Mode from the Bubble, review the PINCH-ranked queue, adjust block durations, start the sprint, complete a block, and show the XP reward summary.
-
-7. **Real-Time Dashboard Synced Overrides:** Open the main system Command Dashboard. Modify a project timeline via the interactive pacing slider. Highlight the immediate backend recalculation as the updated daily block requirements update live inside the floating bubble interface via WebSocket pushes.
-
-8. **AI Chat Assistant:** Open the chat panel, describe a task conversationally, and show how the AI assistant automatically creates a structured task in the background.
-
-9. **Theme Shop & Interest Vault:** Navigate to the Shop tab, purchase an unlocked theme with earned XP, apply it, and show the Interest Vault facts that were earned during task completions.
-
-10. **Closing Architectural Summary:** Reiterate the core technical principle: zero red overdue badges, zero blank-canvas text input forms, and absolute failure-neutral scheduling loops that respect the user's focus and attention limits.

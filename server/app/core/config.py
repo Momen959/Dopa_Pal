@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     NOTION_CLIENT_SECRET: str = ""
     NOTION_OAUTH_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/notion/callback"
 
+    # Jira OAuth settings (External integration)
+    JIRA_CLIENT_ID: str = ""
+    JIRA_CLIENT_SECRET: str = ""
+    JIRA_OAUTH_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/jira/callback"
+
     # AI / NLP Module Configuration
     NVIDIA_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
     NVIDIA_API_KEY: str = ""

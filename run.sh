@@ -14,7 +14,7 @@ if ! docker info > /dev/null 2>&1; then
 fi
 
 echo "Purging old container structures and volume caches..."
-docker compose down --volumes --remove-orphans > /dev/null 2>&1
+docker compose down --remove-orphans > /dev/null 2>&1
 
 echo "Building backend from server folder..."
 docker compose build --no-cache backend

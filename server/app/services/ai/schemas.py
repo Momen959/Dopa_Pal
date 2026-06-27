@@ -17,6 +17,7 @@ class SourceType(str, Enum):
     GOOGLE_TASKS = "google_tasks"
     GMAIL = "gmail"
     NOTION = "notion"
+    JIRA = "jira"
 
 
 class ParsedTask(BaseModel):

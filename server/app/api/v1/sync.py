@@ -14,6 +14,11 @@ from app.services.notion_service import (
     get_token_entry as notion_token_entry,
     DEFAULT_NOTION_SETTINGS,
 )
+from app.services.jira_service import (
+    sync_jira,
+    get_token_entry as jira_token_entry,
+    DEFAULT_JIRA_SETTINGS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -222,6 +227,73 @@ def update_notion_sync_settings(body: SyncSettingsUpdate, db: Session = Depends(
     token = notion_token_entry(db, user.id)
     if not token:
         return SyncSettingsResponse(settings=DEFAULT_NOTION_SETTINGS)
+    settings = dict(token.settings_json or {})
+    for k, v in body.settings.items():
+        if isinstance(v, dict) and isinstance(settings.get(k), dict):
+            settings[k] = {**settings[k], **v}
+        else:
+            settings[k] = v
+    token.settings_json = settings
+    db.commit()
+    return SyncSettingsResponse(settings=settings)
+
+
+class JiraSyncResponse(BaseModel):
+    success: bool
+    issues_fetched: int = 0
+    new: int = 0
+    skipped_duplicate: int = 0
+    skipped_resolved: int = 0
+    skipped_excluded: int = 0
+    skipped_no_title: int = 0
+    failed: int = 0
+    synced_at: str | None = None
+    error: str | None = None
+
+
+# ── Jira sync endpoints ────────────────────────────────────────────────
+
+
+@router.post("/sync/jira", response_model=JiraSyncResponse)
+async def trigger_jira_sync(db: Session = Depends(get_db)):
+    user = get_or_create_default_user(db)
+    result = await sync_jira(db, user.id)
+    return JiraSyncResponse(**result)
+
+
+@router.get("/sync/jira/status", response_model=SyncStatusResponse)
+def jira_sync_status(db: Session = Depends(get_db)):
+    user = get_or_create_default_user(db)
+    status = get_integration_status(db, user.id, "jira")
+    last_synced = None
+    if status.get("connected"):
+        token = jira_token_entry(db, user.id)
+        if token and token.settings_json:
+            last_synced = token.settings_json.get("last_synced_at")
+    return SyncStatusResponse(
+        connected=status.get("connected", False),
+        is_expired=status.get("is_expired", False),
+        expires_at=status.get("expires_at"),
+        last_synced_at=last_synced,
+    )
+
+
+@router.get("/sync/jira/settings", response_model=SyncSettingsResponse)
+def get_jira_sync_settings(db: Session = Depends(get_db)):
+    user = get_or_create_default_user(db)
+    token = jira_token_entry(db, user.id)
+    if not token:
+        return SyncSettingsResponse(settings=DEFAULT_JIRA_SETTINGS)
+    from app.services.jira_service import _read_settings
+    return SyncSettingsResponse(settings=_read_settings(token))
+
+
+@router.put("/sync/jira/settings", response_model=SyncSettingsResponse)
+def update_jira_sync_settings(body: SyncSettingsUpdate, db: Session = Depends(get_db)):
+    user = get_or_create_default_user(db)
+    token = jira_token_entry(db, user.id)
+    if not token:
+        return SyncSettingsResponse(settings=DEFAULT_JIRA_SETTINGS)
     settings = dict(token.settings_json or {})
     for k, v in body.settings.items():
         if isinstance(v, dict) and isinstance(settings.get(k), dict):

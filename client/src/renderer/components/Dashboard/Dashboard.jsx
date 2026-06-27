@@ -191,6 +191,14 @@ const NotionLogo = ({ size = 20 }) => (
     <path fill="#fff" d="M7.8 6.6l2.7-.2v10.5l-2.7.2V6.6z" />
   </svg>
 );
+const JiraLogo = ({ size = 20 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24">
+    <rect width="24" height="24" rx="4" fill="#2684ff" />
+    <path d="M12 4C7.58 4 4 7.58 4 12s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm3.5 10.5l-3.5 3.5-3.5-3.5L12 11l3.5 3.5z" fill="#fff" />
+    <path d="M12 8l3.5 3.5L12 15l-3.5-3.5L12 8z" fill="#deebff" />
+  </svg>
+);
+
 const TaskListLogo = ({ size = 20 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -277,7 +285,7 @@ const NOTIFICATION_DIGESTS = [
 const INTEGRATION_PROVIDERS = [
   { id: 'google', name: 'Google', accent: '#38bdf8', logo: '/integrations/google.svg', apps: ['Tasks', 'Calendar', 'Gmail'], tokenLabel: 'OAuth access token', settingLabel: 'Account email', settingKey: 'email' },
   { id: 'notion', name: 'Notion', accent: '#f8fafc', logo: '/integrations/notion.svg', apps: ['Databases', 'Tasks'], tokenLabel: 'Integration token', settingLabel: 'Database ID', settingKey: 'database_id' },
-  { id: 'jira', name: 'Jira', accent: '#60a5fa', logo: '/integrations/jira.svg', apps: ['Issues', 'Projects'], tokenLabel: 'API token', settingLabel: 'Project key', settingKey: 'project_key' },
+  { id: 'jira', name: 'Jira', accent: '#2684ff', logo: '/integrations/jira.svg', apps: ['Issues', 'Projects'], tokenLabel: 'API token', settingLabel: 'Project key', settingKey: 'project_key' },
   { id: 'canvas', name: 'Canvas LMS', accent: '#fb7185', logo: '/integrations/canvas.svg', apps: ['Assignments', 'Courses'], tokenLabel: 'Access token', settingLabel: 'Course ID', settingKey: 'course_id' },
 ];
 
@@ -785,6 +793,7 @@ export default function Dashboard() {
   const [notionSchema, setNotionSchema] = useState(null);
   const [notionSchemaLoading, setNotionSchemaLoading] = useState(false);
 
+
   // Settings state
   const [languageDraft, setLanguageDraft] = useState({
     primary: 'ar',
@@ -1146,7 +1155,57 @@ export default function Dashboard() {
     }
   };
 
-  // ── Sync settings (Google + Notion) ──────────────────────────────
+  // ── Jira connection (manual API token + instance URL + email) ────
+  const connectJira = async () => {
+    if (IS_ELECTRON && window.electronAPI.startJiraOAuth) {
+      setIntegrationSaving('jira');
+      setIntegrationMessage('');
+      try {
+        const result = await window.electronAPI.startJiraOAuth();
+        if (result.success) {
+          pushToast('Jira connected!', 'success');
+          await fetchIntegrations();
+        } else {
+          setIntegrationMessage(result.error || 'Connection failed.');
+        }
+      } catch (err) {
+        console.error('Jira OAuth error:', err);
+        setIntegrationMessage('Could not connect Jira. Check the backend logs.');
+      } finally {
+        setIntegrationSaving(null);
+      }
+    } else {
+      // Browser fallback: open OAuth URL in a new tab
+      try {
+        const { url } = await api.get('/auth/jira/url');
+        if (url) {
+          window.open(url, '_blank', 'width=600,height=700');
+          setIntegrationMessage('Complete authorization in the opened tab, then refresh.');
+        } else {
+          setIntegrationMessage('Jira OAuth is not configured on the server.');
+        }
+      } catch (err) {
+        console.error('Jira OAuth error:', err);
+        setIntegrationMessage('Could not start Jira authorization.');
+      }
+    }
+  };
+
+  const disconnectJira = async () => {
+    setIntegrationSaving('jira');
+    try {
+      await api.delete('/integrations/config/jira');
+      pushToast('Jira disconnected', 'success');
+      await fetchIntegrations();
+    } catch (err) {
+      console.error('Disconnect error:', err);
+      pushToast('Failed to disconnect', 'error');
+    } finally {
+      setIntegrationSaving(null);
+    }
+  };
+
+  // ── Sync settings (Google + Notion + Jira) ───────────────────────
 
   const loadSyncSettings = async (provider) => {
     setSyncSettingsLoading(true);
@@ -1180,6 +1239,11 @@ export default function Dashboard() {
             setNotionSchemaLoading(false);
           }
         }
+      } else if (provider === 'jira') {
+        const res = await api.get('/sync/jira/settings');
+        const s = res.settings || {};
+        setSyncSettingsData(s);
+        setSyncSettingsDraft(JSON.parse(JSON.stringify(s)));
       } else {
         const res = await api.get('/sync/google/settings');
         const s = res.settings || {};
@@ -1199,6 +1263,8 @@ export default function Dashboard() {
       const provider = syncSettingsModal;
       if (provider === 'notion') {
         await api.put('/sync/notion/settings', { settings: syncSettingsDraft });
+      } else if (provider === 'jira') {
+        await api.put('/sync/jira/settings', { settings: syncSettingsDraft });
       } else {
         await api.put('/sync/google/settings', { settings: syncSettingsDraft });
       }
@@ -2297,7 +2363,8 @@ export default function Dashboard() {
 
                       // Provider-specific health checks
                       const notionMissingDb = provider.id === 'notion' && rawConnected && !status.settings?.notion_database_id;
-                      const needsReconnect = (rawConnected && expired) || notionMissingDb;
+                      const jiraMissingConfig = provider.id === 'jira' && rawConnected && !(status.settings?.jira_cloud_id || (status.settings?.jira_instance_url && status.settings?.jira_email));
+                      const needsReconnect = (rawConnected && expired) || notionMissingDb || jiraMissingConfig;
 
                       const connected = connectedAndGood && !needsReconnect;
 
@@ -2312,6 +2379,10 @@ export default function Dashboard() {
                         else if (notionMissingDb) { btnLabel = 'Configure'; btnAction = () => openSyncSettings('notion'); }
                         else if (connected) { btnLabel = 'Disconnect'; btnAction = disconnectNotion; }
                         else { btnLabel = 'Connect'; btnAction = connectNotion; }
+                      } else if (provider.id === 'jira') {
+                        if (jiraMissingConfig) { btnLabel = 'Configure'; btnAction = connectJira; }
+                        else if (connected) { btnLabel = 'Disconnect'; btnAction = disconnectJira; }
+                        else { btnLabel = 'Connect'; btnAction = connectJira; }
                       }
 
                       let bg = 'var(--accent)';
@@ -2320,6 +2391,8 @@ export default function Dashboard() {
                       if (provider.id === 'notion' && expired) {
                         bg = '#ef4444'; txt = '#fff'; bdr = 'none';
                       } else if (provider.id === 'notion' && notionMissingDb) {
+                        bg = '#f59e0b'; txt = '#fff'; bdr = 'none';
+                      } else if (provider.id === 'jira' && jiraMissingConfig) {
                         bg = '#f59e0b'; txt = '#fff'; bdr = 'none';
                       } else if (expired) {
                         bg = '#ef4444'; txt = '#fff'; bdr = 'none';
@@ -2333,9 +2406,11 @@ export default function Dashboard() {
                         'Tasks': <TaskListLogo size={13} />,
                         'Calendar': <CalendarLogo size={13} />,
                         'Gmail': <GmailLogo size={13} />,
-                        'Databases': <NotionLogo size={13} />,
+                        'Databases': <img src="/integrations/notion.svg" alt="Notion" style={{ width: 13, height: 13 }} />,
+                        'Issues': <img src="/integrations/jira.svg" alt="Jira" style={{ width: 13, height: 13 }} />,
+                        'Projects': <img src="/integrations/jira.svg" alt="Jira" style={{ width: 13, height: 13 }} />,
                       };
-                      const available = provider.id === 'google' || provider.id === 'notion';
+                      const available = provider.id === 'google' || provider.id === 'notion' || provider.id === 'jira';
                       return (
                         <div key={provider.id} className="d-provider-card" style={{ position: 'relative' }}>
                           <div className="d-provider-card-header">
@@ -2582,10 +2657,17 @@ export default function Dashboard() {
                             <span className="d-integration-label">Expires</span>
                             <strong>{expiresAt}</strong>
                           </div>
-                          <div>
-                            <span className="d-integration-label">{provider.settingLabel}</span>
-                            <strong>{status.settings?.[provider.settingKey] || 'None'}</strong>
-                          </div>
+                          {provider.id === 'jira' ? (
+                            <div>
+                              <span className="d-integration-label">Instance</span>
+                              <strong>{status.settings?.jira_instance_url || 'Not set'}</strong>
+                            </div>
+                          ) : (
+                            <div>
+                              <span className="d-integration-label">{provider.settingLabel}</span>
+                              <strong>{status.settings?.[provider.settingKey] || 'None'}</strong>
+                            </div>
+                          )}
                         </div>
 
                         {provider.id === 'google' ? (
@@ -2594,6 +2676,14 @@ export default function Dashboard() {
                             <button className="d-btn d-btn--primary" onClick={connectGoogle} disabled={!!integrationSaving} style={{ alignSelf: 'stretch' }}>
                               {integrationSaving === 'google' ? 'Connecting...' : (status.connected ? 'Reconnect Google' : 'Connect with Google')}
                             </button>
+                          </div>
+                        ) : provider.id === 'jira' ? (
+                          <div className="d-modal-form">
+                            <p className="d-field-help">Connect your Jira account to sync issues as tasks.</p>
+                            <button className="d-btn d-btn--primary" onClick={connectJira} disabled={!!integrationSaving} style={{ alignSelf: 'stretch' }}>
+                              {integrationSaving === 'jira' ? 'Connecting...' : (status.connected ? 'Reconnect Jira' : 'Connect with Jira')}
+                            </button>
+                            {integrationMessage && <div className="d-integration-message">{integrationMessage}</div>}
                           </div>
                         ) : (
                           <form className="d-modal-form" onSubmit={submitIntegration}>
@@ -2909,7 +2999,7 @@ export default function Dashboard() {
           <div className={`d-modal-content${syncSettingsClosing ? ' closing' : ''}`} onClick={e => e.stopPropagation()} style={{ maxWidth: syncSettingsModal === 'notion' ? 500 : 540, maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
             <div className="d-modal-header">
               <span style={{ fontWeight: 600, fontSize: 16 }}>
-                {syncSettingsModal === 'notion' ? 'Notion Sync Settings' : 'Google Sync Settings'}
+                {syncSettingsModal === 'notion' ? 'Notion Sync Settings' : syncSettingsModal === 'jira' ? 'Jira Sync Settings' : 'Google Sync Settings'}
               </span>
               <button className="d-modal-close" onClick={closeSyncSettings}>×</button>
             </div>
@@ -3072,6 +3162,83 @@ export default function Dashboard() {
                       ) : d.notion_database_id && !notionSchemaLoading ? (
                         <p style={{ fontSize: 13, color: 'var(--text-warning)', padding: '8px 0' }}>Could not load database schema. Make sure the integration has access to the database.</p>
                       ) : null}
+                    </div>
+                  );
+                })()
+              ) : syncSettingsModal === 'jira' ? (
+                (() => {
+                  const set = (path, val) => {
+                    setSyncSettingsDraft(prev => {
+                      const copy = JSON.parse(JSON.stringify(prev));
+                      const parts = path.split('.');
+                      let cur = copy;
+                      for (let i = 0; i < parts.length - 1; i++) {
+                        if (!cur[parts[i]]) cur[parts[i]] = {};
+                        cur = cur[parts[i]];
+                      }
+                      cur[parts[parts.length - 1]] = val;
+                      return copy;
+                    });
+                  };
+                  const d = syncSettingsDraft;
+                  const parseChips = (str) => (str || '').split(/[,;]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
+                  const chipsToStr = (arr) => arr.join(', ');
+                  return (
+                    <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span className="d-field-label">Jira Instance URL</span>
+                        <input className="d-input" value={d.jira_instance_url || ''} onChange={e => set('jira_instance_url', e.target.value)} placeholder="https://mycompany.atlassian.net" />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span className="d-field-label">Email</span>
+                        <input className="d-input" value={d.jira_email || ''} onChange={e => set('jira_email', e.target.value)} placeholder="user@example.com" />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span className="d-field-label">Project Key</span>
+                        <p className="d-field-help" style={{ margin: 0 }}>Optional — only sync issues from this project (e.g. PROJ).</p>
+                        <input className="d-input" value={d.jira_project_key || ''} onChange={e => set('jira_project_key', e.target.value.toUpperCase())} placeholder="PROJ" style={{ width: 120 }} />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span className="d-field-label">JQL Filter</span>
+                        <p className="d-field-help" style={{ margin: 0 }}>Custom JQL query. Default: <code>assignee = currentUser() AND resolution = Unresolved</code>.</p>
+                        <input className="d-input" value={d.jql_filter || ''} onChange={e => set('jql_filter', e.target.value)} placeholder="assignee = currentUser() AND resolution = Unresolved" />
+                      </label>
+
+                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                        <span className="d-field-label" style={{ display: 'block', marginBottom: 8 }}>Property Mapping</span>
+                        <p className="d-field-help" style={{ margin: '0 0 12px 0' }}>Map Jira field names to dopaPal task fields.</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          {['summary', 'duedate', 'priority', 'status', 'labels'].map(field => (
+                            <label key={field} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                              <span style={{ fontSize: 13, color: 'var(--text2)', textTransform: 'capitalize' }}>{field} field</span>
+                              <input className="d-input" value={(d.property_mapping || {})[field] || ''} onChange={e => set(`property_mapping.${field}`, e.target.value)} placeholder={field} style={{ width: 200 }} />
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                        <span className="d-field-label" style={{ display: 'block', marginBottom: 8 }}>Sync Filters</span>
+                        <p className="d-field-help" style={{ margin: '0 0 12px 0' }}>Control which issues are synced based on resolution and status.</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          <label className="d-toggle-row" style={{ marginBottom: 0 }}>
+                            <span style={{ fontSize: 13 }}>Skip resolved issues</span>
+                            <input type="checkbox" checked={(d.sync_filters || {}).resolved_filter !== false} onChange={e => set('sync_filters.resolved_filter', e.target.checked)} />
+                          </label>
+                          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <span className="d-field-label">Exclude resolutions</span>
+                            <ChipInput values={parseChips((d.sync_filters || {}).exclude_resolution)} onChange={vals => set('sync_filters.exclude_resolution', chipsToStr(vals))} placeholder="e.g. Won't Do, Duplicate" />
+                          </label>
+                          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <span className="d-field-label">Include statuses</span>
+                            <ChipInput values={parseChips((d.sync_filters || {}).include_statuses)} onChange={vals => set('sync_filters.include_statuses', chipsToStr(vals))} placeholder="e.g. In Progress, To Do" />
+                          </label>
+                          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <span className="d-field-label">Exclude statuses</span>
+                            <ChipInput values={parseChips((d.sync_filters || {}).exclude_statuses)} onChange={vals => set('sync_filters.exclude_statuses', chipsToStr(vals))} placeholder="e.g. Done, Cancelled" />
+                          </label>
+                        </div>
+                      </div>
                     </div>
                   );
                 })()

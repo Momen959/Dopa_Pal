@@ -55,6 +55,10 @@ def save_integration_config(
             from app.services.notion_service import DEFAULT_NOTION_SETTINGS
             for k, v in DEFAULT_NOTION_SETTINGS.items():
                 merged_settings.setdefault(k, v)
+        if provider == "jira":
+            from app.services.jira_service import DEFAULT_JIRA_SETTINGS
+            for k, v in DEFAULT_JIRA_SETTINGS.items():
+                merged_settings.setdefault(k, v)
         token_entry = IntegrationToken(
             user_id=user_id,
             provider=provider,

@@ -24,11 +24,13 @@ from app.api.v1.integrations import router as integrations_router
 from app.api.v1.chat import router as chat_router
 from app.api.v1.auth_google import router as auth_google_router
 from app.api.v1.auth_notion import router as auth_notion_router
+from app.api.v1.auth_jira import router as auth_jira_router
 from app.api.v1.sync import router as sync_router
 
 from app.services.websocket_manager import manager as ws_manager
 from app.services.google_service import sync_google, get_token_entry as google_token, SYNC_INTERVAL_MINUTES
-from app.services.notion_service import sync_notion, get_token_entry as notion_token, SYNC_INTERVAL_MINUTES as NOTION_INTERVAL
+from app.services.notion_service import sync_notion, SYNC_INTERVAL_MINUTES as NOTION_INTERVAL
+from app.services.jira_service import sync_jira
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +69,9 @@ async def _periodic_google_sync():
             continue
 
 
+JIRA_INTERVAL = 15
+
+
 async def _periodic_notion_sync():
     """Run Notion sync every NOTION_INTERVAL for each connected user."""
     while not _sync_event.is_set():
@@ -97,6 +102,36 @@ async def _periodic_notion_sync():
             continue
 
 
+async def _periodic_jira_sync():
+    """Run Jira sync every JIRA_INTERVAL for each connected user."""
+    while not _sync_event.is_set():
+        try:
+            db = SessionLocal()
+            try:
+                tokens = db.query(IntegrationToken).filter(
+                    IntegrationToken.provider == "jira"
+                ).all()
+                for token in tokens:
+                    try:
+                        await sync_jira(db, token.user_id)
+                        logger.info("Background Jira sync done for user %d", token.user_id)
+                    except Exception as e:
+                        logger.warning("Background Jira sync failed for user %d: %s", token.user_id, e)
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error("Background Jira sync loop error: %s", e)
+
+        try:
+            await asyncio.wait_for(
+                _sync_event.wait(),
+                timeout=JIRA_INTERVAL * 60,
+            )
+            break
+        except asyncio.TimeoutError:
+            continue
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
@@ -104,6 +139,7 @@ async def lifespan(app: FastAPI):
 
     _background_tasks.append(asyncio.create_task(_periodic_google_sync()))
     _background_tasks.append(asyncio.create_task(_periodic_notion_sync()))
+    _background_tasks.append(asyncio.create_task(_periodic_jira_sync()))
 
     yield
 
@@ -137,6 +173,7 @@ app.include_router(integrations_router, prefix=settings.API_V1_STR)
 app.include_router(chat_router, prefix=settings.API_V1_STR)
 app.include_router(auth_google_router, prefix=settings.API_V1_STR)
 app.include_router(auth_notion_router, prefix=settings.API_V1_STR)
+app.include_router(auth_jira_router, prefix=settings.API_V1_STR)
 app.include_router(sync_router, prefix=settings.API_V1_STR)
 
 @app.get("/", tags=["System"])

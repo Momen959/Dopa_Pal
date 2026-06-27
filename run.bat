@@ -16,7 +16,7 @@ if %errorlevel% neq 0 (
 )
 
 echo Purging old container structures and volume caches...
-docker compose down --volumes --remove-orphans >nul 2>&1
+docker compose down --remove-orphans >nul 2>&1
 
 echo Building backend from server folder...
 docker compose build --no-cache backend
