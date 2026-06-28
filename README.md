@@ -1201,6 +1201,99 @@ The assistant's persona guidelines are built on specific neurodivergent-supporti
 
 ---
 
+### 4. Shop & Audio Lab — The Focus Environment Marketplace
+
+The Shop and Audio Lab form a tightly coupled reward ecosystem where XP earned from task completion is spent on personalizing the user's workspace environment through visuals, themes, and sound. This creates a powerful auditory anchoring system — a proven tool for blocking environmental distractions and sustaining attention.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 THE COMPLETE BEHAVIORAL LOOP                    │
+│                                                                 │
+│    ┌──────────────────────┐                                     │
+│    │  Complete Tasks /    │                                      │
+│    │  Overcome Paralysis  │──────► Earns XP / Focus Tokens      │
+│    └──────────────────────┘                                      │
+│              │                                                   │
+│              ▼                                                   │
+│    ┌──────────────────────┐        ┌──────────────────────┐     │
+│    │     THE SHOP         │◄───────│ Spending Tokens      │     │
+│    │  (Aesthetic & Audio  │        │ unlocks Themes,      │     │
+│    │   Marketplace)       │        │ Sound Layers, SFX    │     │
+│    └──────────┬───────────┘        └──────────────────────┘     │
+│               │                                                  │
+│               ▼                                                  │
+│    ┌──────────────────────┐                                      │
+│    │    THE AUDIO LAB     │──────► Mix Custom Soundscapes        │
+│    │  (Soundscape Forge)  │        (Rain + Lo-Fi + Spaceship)   │
+│    └──────────┬───────────┘                                      │
+│               │                                                  │
+│               ▼                                                  │
+│    ┌──────────────────────┐                                      │
+│    │  Deep Focus Mode     │──────► Completing next tasks         │
+│    │  Triggered           │        becomes easier                │
+│    └──────────────────────┘                                      │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### 4a. The Shop — Aesthetic & Auditory Marketplace
+
+The Shop is the reward hub where focus tokens (earned through task completion, sprints, and streaks) are spent entirely on personalizing the cognitive environment.
+
+| Category | Examples | Purpose |
+| --- | --- | --- |
+| **Visuals & Themes** | Custom color palettes (neon cybersecurity glow, ultra-calm dark mode), bubble face animation packs | Tailor the visual identity to match the user's aesthetic comfort zone |
+| **Full Soundtracks** | Lo-fi beats, synthwave tracks, deep-focus drone loops | Long-form audio designed for sustained work blocks |
+| **Isolated Sound Layers (SFX)** | Nature: heavy rain, rolling thunder, rustling leaves, ocean waves. Mechanical: crackling vinyl, steady fan, distant train, keyboard clicks. Sci-Fi: spaceship cockpit hum, magical campfire, deep space resonance | Build custom layered soundscapes from individual components |
+
+#### 4b. The Audio Lab — Custom Soundscape Forge
+
+The Audio Lab is an interactive sandbox where the user becomes the sound engineer of their own productivity. Instead of playing a static audio file, it provides complete sensory control.
+
+```
+┌─────────────────────────────────────────────────┐
+│              THE MIXING DECK                    │
+│                                                 │
+│  ┌─────────────────────────────────────────┐   │
+│  │  Sound Layer 1: [Heavy Rain]    ═══●══  │   │
+│  │                               Volume 70% │   │
+│  ├─────────────────────────────────────────┤   │
+│  │  Sound Layer 2: [Lo-fi Beat]   ═══●══  │   │
+│  │                               Volume 45% │   │
+│  ├─────────────────────────────────────────┤   │
+│  │  Sound Layer 3: [Spaceship Hum] ═══●══  │   │
+│  │                               Volume 25% │   │
+│  ├─────────────────────────────────────────┤   │
+│  │  Sound Layer 4: [Keyboard Clicks] ═══●══│   │
+│  │                               Volume 15% │   │
+│  └─────────────────────────────────────────┘   │
+│                                                 │
+│  [Save as: "Thunderstorm Cafe"]  [▶ Play]       │
+│                                                 │
+│  ┌── Bubble Grooves to the beat ──────────┐     │
+│  │  🫧  "Nice mix! This one's a vibe."    │     │
+│  └────────────────────────────────────────┘     │
+└─────────────────────────────────────────────────┘
+```
+
+**Core features:**
+- **The Mixing Deck:** A clean dashboard where users activate multiple purchased sounds simultaneously — mixing rain, lo-fi beats, and a spaceship hum all at once.
+- **Granular Volume Sliders:** Every sound layer has independent volume control. If thunder is too jarring, pull it to a soft murmur while keeping keyboard clicks crisp.
+- **Custom Presets:** Once a user builds a winning combination (e.g., *"Late Night Cafe in a Thunderstorm"*), they name and save it to their personal library for one-tap recall.
+- **Bubble Synchronization:** While a soundtrack is active, the floating bubble's face subtly bounces, nods, or grooves along to the rhythm, reinforcing the shared focus space.
+
+#### 4c. Audio-Aware System Triggers
+
+The Audio Lab is not an isolated feature — it hooks into the core runtime to create sensory feedback loops:
+
+| Trigger Event | Audio Lab Response |
+| --- | --- |
+| **Task Completed** | A satisfying chime or thoc from the user's active sound library plays, rewarding the action with auditory feedback |
+| **Sprint Start / Focus Mode** | The active soundscape auto-fades in (or crossfades to a "Deep Focus" preset if one is saved) |
+| **Low State / Burnout Shield** | The soundscape auto-fades to a calmer preset (quiet rain, gentle static) to match the reduced cognitive load |
+| **Shop Purchase** | A preview plays automatically inside the Audio Lab so the user hears what they just unlocked before mixing it |
+
+---
+
 #### Settings JSON Contract (`settings_json` on `integration_tokens`)
 
 **Notion default settings:**
