@@ -1073,6 +1073,61 @@ source_type: voice
 * **Sync Settings:** `GET /api/v1/sync/jira/settings` — returns merged settings (defaults + stored overrides)
 * **Update Settings:** `PUT /api/v1/sync/jira/settings` — accepts `{ settings: { jira_project_key, jql_filter, property_mapping, sync_filters } }`; deep-merges nested objects
 
+#### Settings JSON Contract (`settings_json` on `integration_tokens`)
+
+**Notion default settings:**
+```json
+{
+  "notion_database_id": "",
+  "last_synced_at": null,
+  "property_mapping": {
+    "title": "Name",
+    "deadline": "Due Date",
+    "interest_tag": "Tags"
+  },
+  "status_field": "",
+  "sync_filters": {
+    "ignore_completed": true,
+    "completed_status_value": "Done"
+  },
+  "synced_page_ids": []
+}
+```
+
+**Google default settings** (stored under `settings_json → sync_settings`):
+```json
+{
+  "calendar_ids": [],
+  "email_sync_enabled": true,
+  "tasks_sync_enabled": true,
+  "max_email_results": 50
+}
+```
+
+**Jira default settings:**
+```json
+{
+  "jira_instance_url": "",
+  "jira_email": "",
+  "jira_cloud_id": "",
+  "jira_project_key": "",
+  "jql_filter": "assignee = currentUser() AND resolution = Unresolved",
+  "property_mapping": {
+    "summary": "Summary",
+    "duedate": "Due Date",
+    "priority": "Priority"
+  },
+  "sync_filters": {
+    "ignore_resolved": true,
+    "resolved_statuses": ["Done", "Closed", "Resolved"],
+    "include_statuses": [],
+    "exclude_statuses": []
+  },
+  "synced_issue_ids": [],
+  "last_synced_at": null
+}
+```
+
 ---
 
 ## 🔭 Future Plan
@@ -1291,62 +1346,5 @@ The Audio Lab is not an isolated feature — it hooks into the core runtime to c
 | **Sprint Start / Focus Mode** | The active soundscape auto-fades in (or crossfades to a "Deep Focus" preset if one is saved) |
 | **Low State / Burnout Shield** | The soundscape auto-fades to a calmer preset (quiet rain, gentle static) to match the reduced cognitive load |
 | **Shop Purchase** | A preview plays automatically inside the Audio Lab so the user hears what they just unlocked before mixing it |
-
----
-
-#### Settings JSON Contract (`settings_json` on `integration_tokens`)
-
-**Notion default settings:**
-```json
-{
-  "notion_database_id": "",
-  "last_synced_at": null,
-  "property_mapping": {
-    "title": "Name",
-    "deadline": "Due Date",
-    "interest_tag": "Tags"
-  },
-  "status_field": "",
-  "sync_filters": {
-    "ignore_completed": true,
-    "completed_status_value": "Done"
-  },
-  "synced_page_ids": []
-}
-```
-
-**Google default settings** (stored under `settings_json → sync_settings`):
-```json
-{
-  "calendar_ids": [],
-  "email_sync_enabled": true,
-  "tasks_sync_enabled": true,
-  "max_email_results": 50
-}
-```
-
-**Jira default settings:**
-```json
-{
-  "jira_instance_url": "",
-  "jira_email": "",
-  "jira_cloud_id": "",
-  "jira_project_key": "",
-  "jql_filter": "assignee = currentUser() AND resolution = Unresolved",
-  "property_mapping": {
-    "summary": "Summary",
-    "duedate": "Due Date",
-    "priority": "Priority"
-  },
-  "sync_filters": {
-    "ignore_resolved": true,
-    "resolved_statuses": ["Done", "Closed", "Resolved"],
-    "include_statuses": [],
-    "exclude_statuses": []
-  },
-  "synced_issue_ids": [],
-  "last_synced_at": null
-}
-```
 
 
