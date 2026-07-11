@@ -2,7 +2,42 @@ import React, { useState, useEffect, useRef } from 'react';
 import './Dashboard.css';
 import api from '../../services/api';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { THEMES, applyTheme } from '../../themes';
+import { THEMES } from '../../themes';
+import { useTheme } from '../../contexts/ThemeContext';
+import { createAudioPlayer } from '../AudioLab/audioEngine';
+import { MixSlot } from '../AudioLab/MixSlot';
+
+
+/**
+ * Profile Overview - UI map
+ *
+ * This Dashboard component renders the Profile Overview page (see project
+ * screenshot). The UI is organized into three main areas reflected in this
+ * file and the surrounding components:
+ *
+ * 1) Left Sidebar Navigation
+ *    - Primary navigation icons and the bottom action icons are defined as
+ *      inline SVG components above (e.g. `IconHome`, `IconTask`, `IconUser`,
+ *      `IconShop`, `IconSettings`). The bottom circular brain icon represents
+ *      the active Profile tab shown in the screenshot.
+ *
+ * 2) User Hero Card
+ *    - The `USER` mock object below models the hero card contents: `name`,
+ *      `email`, `avatar`, `streak`, `level`, and `xp`. In production these
+ *      values come from the user API (`api`) and are rendered in the hero
+ *      component at the top of the profile view.
+ *
+ * 3) Gamification & Task Stats Grid
+ *    - The grid of stat cards (Day Streak, XP, Completed Tasks, Remaining
+ *      Tasks, Themes Unlocked, Sync Connections) is represented by derived
+ *      values in this file and by helper UI blocks in the JSX. These cards
+ *      consume user & task state (streak, xp, completed counts, integrations)
+ *      and are the authoritative source for the profile metrics shown.
+ *
+ * Use this block as a guide when updating the profile layout or wiring real
+ * backend fields. The following sections of this file contain the mock data
+ * and the icons referenced above to make it easy to find each area.
+ */
 
 /* ─── Helpers ───────────────────────────────────────────── */
 const IS_ELECTRON = typeof window !== 'undefined' && !!window.electronAPI;
@@ -133,6 +168,7 @@ const Svg = ({ children, size = 20 }) => (
   </svg>
 );
 const IconHome = () => <Svg><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></Svg>;
+const IconMenu = () => <Svg><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></Svg>;
 const IconTask = () => <Svg><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></Svg>;
 const IconUser = () => <Svg><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></Svg>;
 const IconSparkle = () => <Svg><path d="M12 3l1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5z" /></Svg>;
@@ -144,6 +180,7 @@ const IconTrash = () => <Svg size={16}><polyline points="3 6 5 6 21 6" /><path d
 const IconPlus = () => <Svg><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" /></Svg>;
 const IconMinus = () => <Svg><line x1="5" y1="12" x2="19" y2="12" /></Svg>;
 const IconMic = () => <Svg><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="22" /><line x1="8" y1="22" x2="16" y2="22" /></Svg>;
+const IconBrain = () => <Svg><path d="M12 2C9.2 2 7 4.2 7 7c0 1 .2 1.9.6 2.7C5.3 10.2 3 12.6 3 15.5 3 18.5 5.5 21 8.5 21h7c3 0 5.5-2.5 5.5-5.5 0-2.9-2.3-5.3-4.6-5.8.4-.8.6-1.7.6-2.7 0-2.8-2.2-5-5-5z" /><path d="M12 7c-1.1 0-2 .9-2 2v3c0 1.1.9 2 2 2s2-.9 2-2V9c0-1.1-.9-2-2-2z" /></Svg>;
 const IconKeyboard = () => <Svg><rect width="20" height="16" x="2" y="4" rx="2" ry="2" /><line x1="6" x2="6.01" y1="8" y2="8" /><line x1="10" x2="10.01" y1="8" y2="8" /><line x1="14" x2="14.01" y1="8" y2="8" /><line x1="18" x2="18.01" y1="8" y2="8" /><line x1="8" x2="16" y1="12" y2="12" /><line x1="6" x2="6.01" y1="16" y2="16" /><line x1="10" x2="10.01" y1="16" y2="16" /><line x1="14" x2="14.01" y1="16" y2="16" /><line x1="18" x2="18.01" y1="16" y2="16" /></Svg>;
 const IconFire = () => <Svg><path d="M12 2c0 0-5 5-5 10a5 5 0 0 0 10 0C17 7 12 2 12 2z" /></Svg>;
 const IconSettings = () => <Svg><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></Svg>;
@@ -151,6 +188,18 @@ const IconLink = () => <Svg><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-
 const IconShop = () => <Svg><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" /></Svg>;
 const IconSync = () => <Svg><path d="M21 12a9 9 0 0 1-15.5 6.3L3 16" /><path d="M3 21v-5h5" /><path d="M3 12A9 9 0 0 1 18.5 5.7L21 8" /><path d="M21 3v5h-5" /></Svg>;
 const IconMusic = () => <Svg><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></Svg>;
+const IconPlay = ({ size = 16 }) => <Svg size={size}><polygon points="5 3 19 12 5 21 5 3" /></Svg>;
+const IconStop = ({ size = 16 }) => <Svg size={size}><rect x="4" y="4" width="16" height="16" /></Svg>;
+const IconEqualizer = ({ size = 16 }) => (
+  <Svg size={size}>
+    <rect x="4" y="12" width="2" height="8" rx="1" />
+    <rect x="8" y="9" width="2" height="11" rx="1" />
+    <rect x="12" y="6" width="2" height="14" rx="1" />
+    <rect x="16" y="11" width="2" height="9" rx="1" />
+    <rect x="20" y="8" width="2" height="12" rx="1" />
+  </Svg>
+);
+const IconLock = ({ size = 16 }) => <Svg size={size}><path d="M6 11V8a6 6 0 0 1 12 0v3" /><rect x="6" y="11" width="12" height="10" rx="2" ry="2" /></Svg>;
 const IconSend = () => <Svg size={18}><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></Svg>;
 const IconBell = () => <Svg><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></Svg>;
 const IconShield = () => <Svg><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></Svg>;
@@ -191,14 +240,6 @@ const NotionLogo = ({ size = 20 }) => (
     <path fill="#fff" d="M7.8 6.6l2.7-.2v10.5l-2.7.2V6.6z" />
   </svg>
 );
-const JiraLogo = ({ size = 20 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24">
-    <rect width="24" height="24" rx="4" fill="#2684ff" />
-    <path d="M12 4C7.58 4 4 7.58 4 12s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm3.5 10.5l-3.5 3.5-3.5-3.5L12 11l3.5 3.5z" fill="#fff" />
-    <path d="M12 8l3.5 3.5L12 15l-3.5-3.5L12 8z" fill="#deebff" />
-  </svg>
-);
-
 const TaskListLogo = ({ size = 20 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -209,34 +250,25 @@ const TaskListLogo = ({ size = 20 }) => (
   </svg>
 );
 
-const SchemaSelect = ({ label, schema, types, value, onChange, placeholder, help }) => {
-  const filtered = (schema || []).filter(p => types.includes(p.type));
-  return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <span style={{ fontSize: 13, color: 'var(--text2)' }}>{label}</span>
-      {help && <p className="d-field-help" style={{ margin: 0 }}>{help}</p>}
-      {filtered.length > 0 ? (
-        <select className="d-input" style={{ appearance: 'auto' }} value={value} onChange={e => onChange(e.target.value)}>
-          <option value="">{placeholder || '— Select —'}</option>
-          {filtered.map(p => (
-            <option key={p.name} value={p.name}>{p.name} ({p.type})</option>
-          ))}
-        </select>
-      ) : (
-        <input className="d-input" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder || 'Type column name'} />
-      )}
-    </label>
-  );
-};
-
 /* ─── Themes Store (imported from themes.js) ─────────────── */
 
 const SHOP_ITEMS = [
+  { id: 'music-brown-noise', type: 'Music', name: 'Deep Brown Noise', cost: 0, accent: '#a78bfa', description: 'Free audio: Endless, calming brown noise for deep focus.' },
+
   { id: 'music-lofi', type: 'Music', name: 'Lo-fi Focus Loop', cost: 800, accent: '#38bdf8', description: 'Soft study ambience for deep work sessions.' },
   { id: 'music-rain', type: 'Music', name: 'Rain Desk', cost: 1200, accent: '#34d399', description: 'Gentle rain bed for the bubble and dashboard.' },
   { id: 'visual-glass', type: 'Visual', name: 'Frosted Panels', cost: 900, accent: '#f472b6', description: 'Adds a brighter glass treatment to panels.' },
   { id: 'visual-compact', type: 'Visual', name: 'Compact Mode', cost: 600, accent: '#fbbf24', description: 'Tighter spacing for dense planning days.' },
 ];
+
+const CORE_THEMES = THEMES.filter(t => t.id === 'default' || t.id === 'calmed-light');
+const SHOP_THEME_SWATCHES = THEMES;
+const THEME_UNLOCK_NOTES = {
+  ocean: 'Unlocks at 800 XP',
+  sunset: 'Unlocks at 1,500 XP',
+  cyber: 'Unlocks at 3,000 XP',
+  gold: 'Unlocks at 10,000 XP',
+};
 
 const LANGUAGE_OPTIONS = [
   { code: 'ar', label: 'Arabic', native: 'العربية', dir: 'rtl', region: 'MENA' },
@@ -283,10 +315,10 @@ const NOTIFICATION_DIGESTS = [
 ];
 
 const INTEGRATION_PROVIDERS = [
-  { id: 'google', name: 'Google', accent: '#38bdf8', logo: '/integrations/google.svg', apps: ['Tasks', 'Calendar', 'Gmail'], tokenLabel: 'OAuth access token', settingLabel: 'Account email', settingKey: 'email' },
-  { id: 'notion', name: 'Notion', accent: '#f8fafc', logo: '/integrations/notion.svg', apps: ['Databases', 'Tasks'], tokenLabel: 'Integration token', settingLabel: 'Database ID', settingKey: 'database_id' },
-  { id: 'jira', name: 'Jira', accent: '#2684ff', logo: '/integrations/jira.svg', apps: ['Issues', 'Projects'], tokenLabel: 'API token', settingLabel: 'Project key', settingKey: 'project_key' },
-  { id: 'canvas', name: 'Canvas LMS', accent: '#fb7185', logo: '/integrations/canvas.svg', apps: ['Assignments', 'Courses'], tokenLabel: 'Access token', settingLabel: 'Course ID', settingKey: 'course_id' },
+  { id: 'google', name: 'Google', accent: '#38bdf8', apps: ['Tasks', 'Calendar', 'Gmail'], tokenLabel: 'OAuth access token', settingLabel: 'Account email', settingKey: 'email' },
+  { id: 'notion', name: 'Notion', accent: '#f8fafc', apps: ['Databases', 'Tasks'], tokenLabel: 'Integration token', settingLabel: 'Database ID', settingKey: 'database_id' },
+  { id: 'jira', name: 'Jira', accent: '#60a5fa', apps: ['Issues', 'Projects'], tokenLabel: 'API token', settingLabel: 'Project key', settingKey: 'project_key' },
+  { id: 'canvas', name: 'Canvas LMS', accent: '#fb7185', apps: ['Assignments', 'Courses'], tokenLabel: 'Access token', settingLabel: 'Course ID', settingKey: 'course_id' },
 ];
 
 /* ─── PINCH categories — single source of truth (no emojis) ── */
@@ -295,9 +327,22 @@ const PINCH_CATEGORIES = [
   { id: 'interest', label: 'Interest', color: '#38bdf8' },
   { id: 'novelty', label: 'Novelty', color: '#fb923c' },
   { id: 'challenge', label: 'Challenge', color: '#22c55e' },
-  { id: 'hurry', label: 'Hurry', color: '#ef4444' },
+  { id: 'hurry', label: 'Hurry', color: '#f59e0b' },
 ];
 const PINCH_BY_ID = Object.fromEntries(PINCH_CATEGORIES.map(c => [c.id, c]));
+
+const getThemeLockNote = (theme) => THEME_UNLOCK_NOTES[theme.id] || `Unlocks at ${theme.cost} XP`;
+const getInterestDotColor = (task) => {
+  if (task.interestTag && PINCH_BY_ID[task.interestTag]) return PINCH_BY_ID[task.interestTag].color;
+  if (task.priority === 'high') return '#fbbf24';
+  if (task.priority === 'medium') return '#38bdf8';
+  if (task.priority === 'low') return '#a78bfa';
+  return 'var(--text3)';
+};
+const formatVaultCaption = (task) => {
+  const when = task.due ? task.due.toLowerCase() : 'recently';
+  return `From ${when}: You completed ${task.title}.`;
+};
 
 const _daysUntil = (deadlineRaw) => {
   if (!deadlineRaw) return Infinity;
@@ -367,7 +412,7 @@ const PriorityBadge = ({ level }) => (
 );
 
 /* ─── Task row ──────────────────────────────────────────── */
-const TaskRow = ({ task, onToggle, onDelete, onUpdateTask, onToggleSub, onUndoSub, onUpdateSub, isDeleting }) => {
+const TaskRow = ({ task, onToggle, onDelete, onUpdateTask, onToggleSub, isDeleting }) => {
   const category = getPinchCategory(task);
   const catColor = PINCH_BY_ID[category].color;
   const [isEditing, setIsEditing] = useState(false);
@@ -377,8 +422,6 @@ const TaskRow = ({ task, onToggle, onDelete, onUpdateTask, onToggleSub, onUndoSu
     task.deadlineRaw ? new Date(task.deadlineRaw).toISOString().slice(0, 16) : ''
   );
   const [editDuration, setEditDuration] = useState(task.estimatedHours ?? '');
-  const [editingSubId, setEditingSubId] = useState(null);
-  const [editSubTitle, setEditSubTitle] = useState('');
 
   const handleSave = () => {
     onUpdateTask(task.id, {
@@ -472,6 +515,8 @@ const TaskRow = ({ task, onToggle, onDelete, onUpdateTask, onToggleSub, onUndoSu
       <div className="d-task-head">
         <button className={`d-task-check${task.done ? ' checked' : ''}`} onClick={() => onToggle(task.id)}>
           {task.done && <IconCheck />}
+
+
         </button>
         <div className="d-task-body">
           <div className="d-task-title-row">
@@ -509,64 +554,22 @@ const TaskRow = ({ task, onToggle, onDelete, onUpdateTask, onToggleSub, onUndoSu
         <div className="d-submods">
           {subs.map((block) => {
             const done = block.status === 'completed';
-            const isSubEditing = editingSubId === block.id;
             return (
-              <div
+              <button
                 key={block.id ?? block.sequence}
                 className={`d-submod${done ? ' d-submod--done' : ''}`}
-                style={{ cursor: done ? 'default' : 'pointer' }}
+                onClick={() => !done && onToggleSub && onToggleSub(task.id, block)}
+                disabled={done}
+                title={done ? 'Completed' : 'Mark step complete'}
               >
-                <button
-                  className="d-submod-check"
-                  onClick={() => done
-                    ? onUndoSub && onUndoSub(task.id, block)
-                    : onToggleSub && onToggleSub(task.id, block)
-                  }
-                  title={done ? 'Undo completion' : 'Mark step complete'}
-                  style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
-                >
-                  {done ? <IconCheck /> : block.sequence}
-                </button>
-                <span className="d-submod-body" onDoubleClick={() => {
-                  if (!done) {
-                    setEditingSubId(block.id);
-                    setEditSubTitle(block.title || '');
-                  }
-                }}>
-                  {isSubEditing ? (
-                    <input
-                      className="d-submod-edit"
-                      value={editSubTitle}
-                      onChange={e => setEditSubTitle(e.target.value)}
-                      onBlur={() => {
-                        if (editSubTitle.trim() && editSubTitle !== block.title) {
-                          onUpdateSub && onUpdateSub(block.id, { title: editSubTitle.trim() });
-                        }
-                        setEditingSubId(null);
-                      }}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') e.target.blur();
-                        if (e.key === 'Escape') { setEditingSubId(null); }
-                      }}
-                      autoFocus
-                    />
-                  ) : (
-                    <span className="d-submod-title">{block.title || `Step ${block.sequence}`}</span>
-                  )}
+                <span className="d-submod-check">{done ? <IconCheck /> : block.sequence}</span>
+                <span className="d-submod-body">
+                  <span className="d-submod-title">{block.title || `Step ${block.sequence}`}</span>
                   <span className="d-submod-meta">
                     {block.duration_minutes}m · {new Date(block.scheduled_date).toLocaleDateString()}
                   </span>
                 </span>
-                {done && (
-                  <button
-                    className="d-submod-undo"
-                    onClick={() => onUndoSub && onUndoSub(task.id, block)}
-                    title="Undo completion"
-                  >
-                    Undo
-                  </button>
-                )}
-              </div>
+              </button>
             );
           })}
         </div>
@@ -575,14 +578,12 @@ const TaskRow = ({ task, onToggle, onDelete, onUpdateTask, onToggleSub, onUndoSu
       {/* ── Source badge ── */}
       {task.sourceType && (
         <div className="d-task-source" title={task.rawSourceText ? task.rawSourceText : task.sourceType}>
-          {task.sourceType === 'manual' && <><IconKeyboard /><span>Manual</span></>}
-          {task.sourceType === 'voice' && <><IconMic /><span>Voice</span></>}
-          {task.sourceType === 'ai' && <><IconSparkle /><span>AI</span></>}
-          {task.sourceType === 'calendar' && <><CalendarLogo size={12} /><span>Google Calendar</span></>}
-          {task.sourceType === 'google_tasks' && <><IconChecklist /><span>Google Tasks</span></>}
-          {task.sourceType === 'gmail' && <><IconMail /><span>Gmail</span></>}
-          {task.sourceType === 'notion' && <><NotionLogo size={12} /><span>Notion</span></>}
-          {task.sourceType === 'highlight' && <><IconSparkle /><span>Highlight</span></>}
+          {task.sourceType === 'manual' && <IconKeyboard />}
+          {task.sourceType === 'voice' && <IconMic />}
+          {task.sourceType === 'ai' && <IconSparkle />}
+          {task.sourceType === 'calendar' && <CalendarLogo size={13} />}
+          {task.sourceType === 'google_tasks' && <IconChecklist />}
+          {task.sourceType === 'gmail' && <IconMail />}
         </div>
       )}
     </div>
@@ -712,11 +713,17 @@ const ChipInput = ({ values = [], onChange, placeholder }) => {
    ══════════════════════════════════════════════════════════ */
 export default function Dashboard() {
   const { t, lang, changeLanguage, isRTL } = useLanguage();
+  const { theme, changeTheme, toggleTheme: toggleSharedTheme } = useTheme();
+  const overlayRgb = theme['overlay-rgb'] || '255,255,255';
+  const overlayColor = (opacity) => `rgba(${overlayRgb}, ${opacity})`;
   const chatEndRef = useRef(null);
-  const [tab, setTab] = useState('home');
+  const [tab, setTab] = useState('profile');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [bubbleTask, setBubbleTask] = useState(null);
   const [pinchFilter, setPinchFilter] = useState('all'); // 'all', 'passion', 'interest', 'novelty', 'challenge', 'hurry'
+  const stateTier = bubbleTask?.mode === 'focused' ? 'high' : bubbleTask?.mode === 'chill' ? 'low' : 'medium';
+  const stateLabel = bubbleTask?.mode === 'focused' ? 'High energy' : bubbleTask?.mode === 'chill' ? 'Low energy' : 'Balanced energy';
 
   // Delete flow (confirm prompt + exit animation) and background toasts
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -764,10 +771,185 @@ export default function Dashboard() {
 
   // Theme state
   const [userXp, setUserXp] = useState(0);
-  const [unlockedThemes, setUnlockedThemes] = useState(['default']);
+  const [unlockedThemes, setUnlockedThemes] = useState(['default', 'calmed-light']);
   const [unlockedShopItems, setUnlockedShopItems] = useState([]);
-  const [activeTheme, setActiveTheme] = useState('default');
   const [activeMusic, setActiveMusic] = useState('none');
+  const [audioVolume, setAudioVolume] = useState(0.55);
+  const [audioMode, setAudioMode] = useState('Forever');
+  const [audioLoopDuration, setAudioLoopDuration] = useState(15);
+  const [isPlayerDismissed, setIsPlayerDismissed] = useState(false);
+  const [lastActiveMusic, setLastActiveMusic] = useState(null);
+  const [showFloatingPlayer, setShowFloatingPlayer] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const audioCtxRef = useRef(null);
+  const audioPlayerRef = useRef(null);
+  const [customMixes, setCustomMixes] = useState([]);
+  const [mixBuilderSounds, setMixBuilderSounds] = useState(['', '']);
+  const [mixBuilderName, setMixBuilderName] = useState('');
+  const [mixBuilderError, setMixBuilderError] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
+  const getMusicName = (musicId) => SHOP_ITEMS.find(item => item.id === musicId)?.name || musicId;
+  const getSlotLabel = (index) => (typeof index === 'number' ? String.fromCharCode(65 + index) : '');
+  const getMusicLabel = (musicKey) => {
+    if (typeof musicKey === 'string' && musicKey.startsWith('mix:')) {
+      const mixId = musicKey.slice(4);
+      const mix = customMixes.find(m => m.id === mixId);
+      return mix?.name || musicKey;
+    }
+    return getMusicName(musicKey);
+  };
+  const getAudioSpec = (musicKey) => {
+    if (typeof musicKey === 'string' && musicKey.startsWith('mix:')) {
+      const mixId = musicKey.slice(4);
+      const mix = customMixes.find(m => m.id === mixId);
+      if (!mix) return 'none';
+      return { type: 'mix', sounds: mix.sounds || [mix.sound_a, mix.sound_b].filter(Boolean) };
+    }
+    return musicKey;
+  };
+  const ownedMusicItems = SHOP_ITEMS.filter(item => item.type === 'Music' && unlockedShopItems.includes(item.id));
+
+  const saveCustomMix = () => {
+    const name = mixBuilderName.trim();
+    const soundIds = mixBuilderSounds.filter(Boolean);
+    const uniqueSoundIds = [...new Set(soundIds)];
+    if (!name || soundIds.length < 2) {
+      setMixBuilderError('Pick at least two different sounds and name your mix.');
+      return;
+    }
+    if (soundIds.length !== uniqueSoundIds.length) {
+      setMixBuilderError('Please choose different sounds for your mix.');
+      return;
+    }
+    if (customMixes.some(mix => mix.name.trim().toLowerCase() === name.toLowerCase())) {
+      setMixBuilderError('You already have a mix called that — pick a different name.');
+      return;
+    }
+    const nextMix = {
+      id: `mix_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
+      name,
+      sounds: soundIds,
+      created_at: new Date().toISOString(),
+    };
+    const nextMixes = [...customMixes, nextMix];
+    setCustomMixes(nextMixes);
+    setMixBuilderName('');
+    setMixBuilderSounds(['', '']);
+    setMixBuilderError('');
+    const activeId = `mix:${nextMix.id}`;
+    setActiveMusic(activeId);
+    localStorage.setItem('dopapal_active_music_v1', activeId);
+  };
+
+  const deleteCustomMix = (mixId) => {
+    const nextMixes = customMixes.filter(mix => mix.id !== mixId);
+    setCustomMixes(nextMixes);
+    setDeleteConfirmId(null);
+    if (activeMusic === `mix:${mixId}`) {
+      setActiveMusic('none');
+      localStorage.setItem('dopapal_active_music_v1', 'none');
+    }
+  };
+
+  const handleOwnedItemSelection = (item) => {
+    if (activeMusic === item.id) {
+      setActiveMusic('none');
+      localStorage.setItem('dopapal_active_music_v1', 'none');
+    } else {
+      equipShopItem(item);
+    }
+  };
+
+  const handleMixToggle = (mixId) => {
+    const nextId = `mix:${mixId}`;
+    if (activeMusic === nextId) {
+      setActiveMusic('none');
+      localStorage.setItem('dopapal_active_music_v1', 'none');
+    } else {
+      setActiveMusic(nextId);
+      localStorage.setItem('dopapal_active_music_v1', nextId);
+    }
+  };
+
+  const assignMixSlot = (index, soundId) => {
+    setMixBuilderSounds(sounds => sounds.map((value, idx) => idx === index ? soundId : value));
+  };
+
+  const clearMixSlot = (index) => {
+    setMixBuilderSounds(sounds => sounds.map((value, idx) => idx === index ? '' : value));
+  };
+
+  const addMixSlot = () => {
+    setMixBuilderSounds(sounds => [...sounds, '']);
+  };
+
+  const removeMixSlot = (index) => {
+    setMixBuilderSounds(sounds => {
+      const next = sounds.filter((_, idx) => idx !== index);
+      return next.length > 0 ? next : [''];
+    });
+  };
+
+  const setMixSlot = (index) => {
+    setSelectedMixSlot(selectedMixSlot === index ? null : index);
+  };
+
+  useEffect(() => {
+    if (!audioCtxRef.current && activeMusic !== 'none') {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume();
+    }
+
+    if (activeMusic !== 'none') {
+      const spec = getAudioSpec(activeMusic);
+
+      if (audioPlayerRef.current?.soundId !== activeMusic) {
+        audioPlayerRef.current?.stop();
+        audioPlayerRef.current = createAudioPlayer(audioCtxRef.current, spec, audioVolume);
+        if (audioPlayerRef.current) audioPlayerRef.current.soundId = activeMusic;
+        setIsAudioPlaying(true);
+      } else if (audioPlayerRef.current) {
+        audioPlayerRef.current.setVolume(audioVolume);
+      }
+    } else {
+      audioPlayerRef.current?.stop();
+      audioPlayerRef.current = null;
+      setIsAudioPlaying(false);
+    }
+
+    return () => {
+      audioPlayerRef.current?.stop();
+      audioPlayerRef.current = null;
+      setIsAudioPlaying(false);
+    };
+  }, [activeMusic, audioVolume, customMixes]);
+
+  // Update lastActiveMusic and show player when activeMusic changes to non-'none'
+  useEffect(() => {
+    if (activeMusic && activeMusic !== 'none') {
+      setLastActiveMusic(activeMusic);
+      setShowFloatingPlayer(true);
+      setIsPlayerDismissed(false);
+    }
+  }, [activeMusic]);
+
+  useEffect(() => {
+    localStorage.setItem('dopaPal_customMixes', JSON.stringify(customMixes));
+  }, [customMixes]);
+
+  useEffect(() => {
+    if (audioMode !== 'Timed loop' || activeMusic === 'none') return undefined;
+    const durationMs = Math.max(1, audioLoopDuration) * 60000;
+    const timer = setTimeout(() => {
+      setActiveMusic('none');
+      localStorage.setItem('dopapal_active_music_v1', 'none');
+    }, durationMs);
+    return () => clearTimeout(timer);
+  }, [audioMode, activeMusic, audioLoopDuration]);
+
   const [activeVisual, setActiveVisual] = useState('default');
   const [purchaseError, setPurchaseError] = useState(null);
 
@@ -780,7 +962,7 @@ export default function Dashboard() {
     expiresInSeconds: 3600,
     settingValue: '',
   });
-  const [integrationSaving, setIntegrationSaving] = useState(null); // provider id string or null
+  const [integrationSaving, setIntegrationSaving] = useState(false);
   const [integrationMessage, setIntegrationMessage] = useState('');
   const [syncSettingsModal, setSyncSettingsModal] = useState(null);
   const [syncSettingsClosing, setSyncSettingsClosing] = useState(false);
@@ -788,11 +970,6 @@ export default function Dashboard() {
   const [syncSettingsDraft, setSyncSettingsDraft] = useState({});
   const [syncSettingsLoading, setSyncSettingsLoading] = useState(false);
   const [syncSettingsSaving, setSyncSettingsSaving] = useState(false);
-  const [availableDatabases, setAvailableDatabases] = useState([]);
-  const [notionDatabasesLoading, setNotionDatabasesLoading] = useState(false);
-  const [notionSchema, setNotionSchema] = useState(null);
-  const [notionSchemaLoading, setNotionSchemaLoading] = useState(false);
-
 
   // Settings state
   const [languageDraft, setLanguageDraft] = useState({
@@ -828,7 +1005,15 @@ export default function Dashboard() {
     else localStorage.setItem('dopapal_xp_v3', 0);
 
     const savedUnlocked = localStorage.getItem('dopapal_themes_v3');
-    if (savedUnlocked) setUnlockedThemes(JSON.parse(savedUnlocked));
+    if (savedUnlocked) {
+      const merged = [...new Set([...JSON.parse(savedUnlocked), 'default', 'calmed-light'])];
+      setUnlockedThemes(merged);
+      localStorage.setItem('dopapal_themes_v3', JSON.stringify(merged));
+    } else {
+      const seededThemes = ['default', 'calmed-light'];
+      setUnlockedThemes(seededThemes);
+      localStorage.setItem('dopapal_themes_v3', JSON.stringify(seededThemes));
+    }
 
     const savedShopItems = localStorage.getItem('dopapal_shop_items_v1');
     if (savedShopItems) setUnlockedShopItems(JSON.parse(savedShopItems));
@@ -855,19 +1040,37 @@ export default function Dashboard() {
           return merged;
         });
       }
-    }).catch(() => {});
-
-    const savedActive = localStorage.getItem('dopapal_active_theme_v3');
-    if (savedActive) setActiveTheme(savedActive);
+    }).catch(() => { });
 
     const savedMusic = localStorage.getItem('dopapal_active_music_v1');
     if (savedMusic) setActiveMusic(savedMusic);
+
+    const savedVolume = localStorage.getItem('dopapal_audio_volume_v1');
+    if (savedVolume) setAudioVolume(parseFloat(savedVolume));
+
+    const savedMode = localStorage.getItem('dopapal_audio_mode_v1');
+    if (savedMode) {
+      if (savedMode === 'Manual') setAudioMode('Forever');
+      else if (savedMode === 'Loop one' || savedMode === 'Auto cycle') setAudioMode('Timed loop');
+      else setAudioMode(savedMode);
+    }
+    const savedLoopDuration = localStorage.getItem('dopapal_audio_loop_duration_v1');
+    if (savedLoopDuration) setAudioLoopDuration(parseInt(savedLoopDuration, 10));
 
     const savedVisual = localStorage.getItem('dopapal_active_visual_v1');
     if (savedVisual) setActiveVisual(savedVisual);
 
     const savedStreak = localStorage.getItem('dopapal_streak_v3');
     if (savedStreak) setStreak(parseInt(savedStreak, 10));
+
+    const savedMixes = localStorage.getItem('dopaPal_customMixes');
+    if (savedMixes) {
+      try {
+        setCustomMixes(JSON.parse(savedMixes));
+      } catch {
+        localStorage.removeItem('dopaPal_customMixes');
+      }
+    }
 
     const savedName = localStorage.getItem('dopapal_username');
     if (savedName) setUserName(savedName);
@@ -882,60 +1085,12 @@ export default function Dashboard() {
     }
 
     const savedNotificationDraft = localStorage.getItem('dopapal_notification_prefs_v1');
-    if (savedNotificationDraft) {
-      try {
-        setNotificationDraft(prev => ({ ...prev, ...JSON.parse(savedNotificationDraft) }));
-      } catch {
-        // ignore malformed local draft
-      }
-    }
 
-    const savedWake = localStorage.getItem('dopapal_wake_time_v1');
-    if (savedWake) {
-      setAccountForm(prev => ({ ...prev, wakeTimePref: savedWake }));
-    }
   }, []);
 
-  useEffect(() => {
-    applyTheme(activeTheme);
-  }, [activeTheme]);
-
-  const buyTheme = (themeId, cost) => {
-    if (userXp >= cost && !unlockedThemes.includes(themeId)) {
-      const newXp = userXp - cost;
-      const newUnlocked = [...unlockedThemes, themeId];
-      setUserXp(newXp);
-      setUnlockedThemes(newUnlocked);
-      localStorage.setItem('dopapal_xp_v3', newXp);
-      localStorage.setItem('dopapal_themes_v3', JSON.stringify(newUnlocked));
-      setPurchaseError(null);
-      api.purchaseReward('theme', themeId).catch(() => {});
-    } else if (userXp < cost) {
-      setPurchaseError('Not enough XP to unlock this theme!');
-      setTimeout(() => setPurchaseError(null), 3000);
-    }
-  };
-
-  const buyShopItem = (itemId, cost) => {
-    if (userXp >= cost && !unlockedShopItems.includes(itemId)) {
-      const newXp = userXp - cost;
-      const newUnlocked = [...unlockedShopItems, itemId];
-      setUserXp(newXp);
-      setUnlockedShopItems(newUnlocked);
-      localStorage.setItem('dopapal_xp_v3', newXp);
-      localStorage.setItem('dopapal_shop_items_v1', JSON.stringify(newUnlocked));
-      setPurchaseError(null);
-      api.purchaseReward('shop_item', itemId).catch(() => {});
-    } else if (userXp < cost) {
-      setPurchaseError('Not enough XP to unlock this customization.');
-      setTimeout(() => setPurchaseError(null), 3000);
-    }
-  };
-
-  const equipTheme = (themeId) => {
-    setActiveTheme(themeId);
-    localStorage.setItem('dopapal_active_theme_v3', themeId);
-  };
+  const activeTheme = theme.id;
+  const equipTheme = changeTheme;
+  const toggleTheme = toggleSharedTheme;
 
   const equipShopItem = (item) => {
     if (item.type === 'Music') {
@@ -1043,7 +1198,7 @@ export default function Dashboard() {
     const provider = INTEGRATION_PROVIDERS.find(p => p.id === selectedProvider);
     if (!provider || !integrationForm.accessToken.trim()) return;
 
-    setIntegrationSaving(provider.id);
+    setIntegrationSaving(true);
     setIntegrationMessage('');
     try {
       await api.configureIntegration({
@@ -1062,13 +1217,13 @@ export default function Dashboard() {
       console.error('Error saving integration:', err);
       setIntegrationMessage('Could not save integration. Check the token fields and backend logs.');
     } finally {
-      setIntegrationSaving(null);
+      setIntegrationSaving(false);
     }
   };
 
   const connectGoogle = async () => {
     if (IS_ELECTRON && window.electronAPI.startGoogleOAuth) {
-      setIntegrationSaving('google');
+      setIntegrationSaving(true);
       setIntegrationMessage('');
       try {
         const result = await window.electronAPI.startGoogleOAuth();
@@ -1082,7 +1237,7 @@ export default function Dashboard() {
         console.error('Google OAuth error:', err);
         setIntegrationMessage('Could not connect Google. Check the backend logs.');
       } finally {
-        setIntegrationSaving(null);
+        setIntegrationSaving(false);
       }
     } else {
       setIntegrationMessage('Google OAuth is only available in the desktop app.');
@@ -1090,7 +1245,7 @@ export default function Dashboard() {
   };
 
   const disconnectGoogle = async () => {
-    setIntegrationSaving('google');
+    setIntegrationSaving(true);
     try {
       await api.delete('/integrations/config/google');
       pushToast('Google disconnected', 'success');
@@ -1099,157 +1254,17 @@ export default function Dashboard() {
       console.error('Disconnect error:', err);
       pushToast('Failed to disconnect', 'error');
     } finally {
-      setIntegrationSaving(null);
+      setIntegrationSaving(false);
     }
   };
 
-  // ── Notion connection (OAuth popup, same UX as Google) ───────────
-  const connectNotion = async () => {
-    if (IS_ELECTRON && window.electronAPI.startNotionOAuth) {
-      setIntegrationSaving('notion');
-      setIntegrationMessage('');
-      try {
-        const result = await window.electronAPI.startNotionOAuth();
-        if (result.success) {
-          pushToast('Notion connected!', 'success');
-          await fetchIntegrations();
-          openSyncSettings('notion');
-        } else {
-          setIntegrationMessage(result.error || 'Connection failed.');
-        }
-      } catch (err) {
-        console.error('Notion OAuth error:', err);
-        setIntegrationMessage('Could not connect Notion. Check the backend logs.');
-      } finally {
-        setIntegrationSaving(null);
-      }
-    } else {
-      // Browser fallback: open OAuth URL in a new tab
-      try {
-        const { url } = await api.get('/auth/notion/url');
-        if (url) {
-          window.open(url, '_blank', 'width=600,height=700');
-          setIntegrationMessage('Complete authorization in the opened tab, then refresh.');
-        } else {
-          setIntegrationMessage('Notion OAuth is not configured on the server.');
-        }
-      } catch (err) {
-        console.error('Notion OAuth error:', err);
-        setIntegrationMessage('Could not start Notion authorization.');
-      }
-    }
-  };
-
-  const disconnectNotion = async () => {
-    setIntegrationSaving('notion');
-    try {
-      await api.delete('/integrations/config/notion');
-      pushToast('Notion disconnected', 'success');
-      setSyncSettingsData({});
-      await fetchIntegrations();
-    } catch (err) {
-      console.error('Disconnect error:', err);
-      pushToast('Failed to disconnect', 'error');
-    } finally {
-      setIntegrationSaving(null);
-    }
-  };
-
-  // ── Jira connection (manual API token + instance URL + email) ────
-  const connectJira = async () => {
-    if (IS_ELECTRON && window.electronAPI.startJiraOAuth) {
-      setIntegrationSaving('jira');
-      setIntegrationMessage('');
-      try {
-        const result = await window.electronAPI.startJiraOAuth();
-        if (result.success) {
-          pushToast('Jira connected!', 'success');
-          await fetchIntegrations();
-        } else {
-          setIntegrationMessage(result.error || 'Connection failed.');
-        }
-      } catch (err) {
-        console.error('Jira OAuth error:', err);
-        setIntegrationMessage('Could not connect Jira. Check the backend logs.');
-      } finally {
-        setIntegrationSaving(null);
-      }
-    } else {
-      // Browser fallback: open OAuth URL in a new tab
-      try {
-        const { url } = await api.get('/auth/jira/url');
-        if (url) {
-          window.open(url, '_blank', 'width=600,height=700');
-          setIntegrationMessage('Complete authorization in the opened tab, then refresh.');
-        } else {
-          setIntegrationMessage('Jira OAuth is not configured on the server.');
-        }
-      } catch (err) {
-        console.error('Jira OAuth error:', err);
-        setIntegrationMessage('Could not start Jira authorization.');
-      }
-    }
-  };
-
-  const disconnectJira = async () => {
-    setIntegrationSaving('jira');
-    try {
-      await api.delete('/integrations/config/jira');
-      pushToast('Jira disconnected', 'success');
-      await fetchIntegrations();
-    } catch (err) {
-      console.error('Disconnect error:', err);
-      pushToast('Failed to disconnect', 'error');
-    } finally {
-      setIntegrationSaving(null);
-    }
-  };
-
-  // ── Sync settings (Google + Notion + Jira) ───────────────────────
-
-  const loadSyncSettings = async (provider) => {
+  const loadSyncSettings = async () => {
     setSyncSettingsLoading(true);
     try {
-      if (provider === 'notion') {
-        const res = await api.get('/sync/notion/settings');
-        const s = res.settings || {};
-        setSyncSettingsData(s);
-        setSyncSettingsDraft(JSON.parse(JSON.stringify(s)));
-        // fetch available databases for the picker
-        setNotionDatabasesLoading(true);
-        try {
-          const dbRes = await api.get('/sync/notion/databases');
-          setAvailableDatabases(dbRes.databases || []);
-        } catch (e) {
-          console.warn('Could not fetch Notion databases', e);
-          setAvailableDatabases([]);
-        } finally {
-          setNotionDatabasesLoading(false);
-        }
-        // fetch schema for the saved database ID
-        if (s.notion_database_id) {
-          setNotionSchemaLoading(true);
-          try {
-            const schemaRes = await api.get(`/sync/notion/database-schema?database_id=${s.notion_database_id}`);
-            setNotionSchema(schemaRes.properties || []);
-          } catch (e) {
-            console.warn('Could not fetch Notion database schema', e);
-            setNotionSchema(null);
-          } finally {
-            setNotionSchemaLoading(false);
-          }
-        }
-      } else if (provider === 'jira') {
-        const res = await api.get('/sync/jira/settings');
-        const s = res.settings || {};
-        setSyncSettingsData(s);
-        setSyncSettingsDraft(JSON.parse(JSON.stringify(s)));
-      } else {
-        const res = await api.get('/sync/google/settings');
-        const s = res.settings || {};
-        setSyncSettingsData(s);
-        setSyncSettingsDraft(JSON.parse(JSON.stringify(s)));
-      }
+      const res = await api.get('/sync/google/settings');
+      const s = res.settings || {};
+      setSyncSettingsData(s);
+      setSyncSettingsDraft(JSON.parse(JSON.stringify(s)));
     } catch (e) {
       console.error('Failed to load sync settings', e);
     } finally {
@@ -1260,16 +1275,8 @@ export default function Dashboard() {
   const saveSyncSettings = async () => {
     setSyncSettingsSaving(true);
     try {
-      const provider = syncSettingsModal;
-      if (provider === 'notion') {
-        await api.put('/sync/notion/settings', { settings: syncSettingsDraft });
-      } else if (provider === 'jira') {
-        await api.put('/sync/jira/settings', { settings: syncSettingsDraft });
-      } else {
-        await api.put('/sync/google/settings', { settings: syncSettingsDraft });
-      }
+      await api.put('/sync/google/settings', { settings: syncSettingsDraft });
       setSyncSettingsData(JSON.parse(JSON.stringify(syncSettingsDraft)));
-      await fetchIntegrations();
       closeSyncSettings();
     } catch (e) {
       console.error('Failed to save sync settings', e);
@@ -1283,13 +1290,11 @@ export default function Dashboard() {
     setTimeout(() => {
       setSyncSettingsModal(null);
       setSyncSettingsClosing(false);
-      setAvailableDatabases([]);
-      setNotionSchema(null);
     }, 180);
   };
 
   const openSyncSettings = (provider) => {
-    loadSyncSettings(provider);
+    if (!syncSettingsData.tasks) loadSyncSettings();
     setSyncSettingsModal(provider);
   };
 
@@ -1332,22 +1337,19 @@ export default function Dashboard() {
 
   // ── Poll background sync status ──
   useEffect(() => {
-    const lastSyncRefs = { google: null, notion: null };
     const check = async () => {
-      for (const provider of ['google', 'notion']) {
-        try {
-          const status = await api.get(`/sync/${provider}/status`);
-          if (status.connected && status.last_synced_at) {
-            const prev = lastSyncRefs[provider];
-            lastSyncRefs[provider] = status.last_synced_at;
-            if (prev && prev !== status.last_synced_at) {
-              pushToast(`${provider.charAt(0).toUpperCase() + provider.slice(1)} data synced`, 'success');
-              fetchTasksAndBubble();
-            }
+      try {
+        const status = await api.get('/sync/google/status');
+        if (status.connected && status.last_synced_at) {
+          const prev = lastSyncAtRef.current;
+          lastSyncAtRef.current = status.last_synced_at;
+          if (prev && prev !== status.last_synced_at) {
+            pushToast('Google data synced', 'success');
+            fetchTasksAndBubble();
           }
-        } catch {
-          // not connected or offline — ignore
         }
+      } catch {
+        // not connected or offline — ignore
       }
     };
     check();
@@ -1468,7 +1470,7 @@ export default function Dashboard() {
       recordingStartTime.current = Date.now();
       recorder.start();
       setIsRecording(true);
-      // Keep showing the options menu, the button will change to a red recording dot
+      // Keep showing the options menu, the button will change to a warm recording dot
       setAddTaskView('options');
       console.log('[Voice] Recording started at', recordingStartTime.current);
     } catch (err) {
@@ -1483,7 +1485,7 @@ export default function Dashboard() {
         const duration = Date.now() - recordingStartTime.current;
         const totalBytes = audioChunks.current.reduce((sum, c) => sum + c.size, 0);
         console.log('[Voice] Recording stopped. Duration:', duration, 'ms | Chunks:', audioChunks.current.length, '| Total bytes:', totalBytes);
-        
+
         if (audioChunks.current.length === 0) {
           console.warn('[Voice] No audio chunks recorded');
           setIsRecording(false);
@@ -1498,14 +1500,14 @@ export default function Dashboard() {
           return;
         }
         const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
-        
+
         // Show loading state while processing voice
         setIsSubmittingTask(true);
         const toastId = pushToast('Analyzing voice with AI...', 'loading', 0);
-        
+
         // Stop all tracks to release the mic
         mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
-        
+
         // Submit the audio blob
         try {
           await submitVoiceTask(audioBlob);
@@ -1519,7 +1521,7 @@ export default function Dashboard() {
           audioChunks.current = [];
         }
       };
-      
+
       mediaRecorder.current.stop();
       setIsRecording(false);
     }
@@ -1543,7 +1545,7 @@ export default function Dashboard() {
 
       const result = await response.json();
       console.log('[Voice] Ingestion successful:', result);
-      
+
       // Reset forms and refresh
       setTaskData({ title: '', duration: '', due: '', notes: '' });
       setAiText('');
@@ -1649,44 +1651,6 @@ export default function Dashboard() {
     }
   };
 
-  const undoSubBlock = async (taskId, block) => {
-    if (!block || block.status !== 'completed') return;
-    const key = block.id ?? block.sequence;
-    const revert = (status) => setTasks(ts => ts.map(t => {
-      if (t.id !== taskId) return t;
-      return {
-        ...t,
-        done: false,
-        subBlocks: (t.subBlocks || []).map(b =>
-          (b.id ?? b.sequence) === key ? { ...b, status, completedAt: null } : b),
-      };
-    }));
-
-    revert('pending');
-    try {
-      if (block.id != null) await api.undoSubBlock(block.id);
-    } catch (e) {
-      console.error('Failed to undo sub-block:', e);
-      revert('completed');
-      pushToast('Could not undo step', 'error', 3000);
-    }
-  };
-
-  const updateSubBlockTitle = async (subBlockId, updates) => {
-    setTasks(ts => ts.map(t => ({
-      ...t,
-      subBlocks: (t.subBlocks || []).map(b =>
-        b.id === subBlockId ? { ...b, ...updates } : b),
-    })));
-
-    try {
-      await api.updateSubBlock(subBlockId, updates);
-    } catch (e) {
-      console.error('Failed to update sub-block:', e);
-      pushToast('Could not update step', 'error', 3000);
-    }
-  };
-
   const updateTaskDetails = async (id, updates) => {
     const current = tasks.find(t => t.id === id);
     const payload = {};
@@ -1739,6 +1703,12 @@ export default function Dashboard() {
   const pending = tasks.filter(t => !t.done);
   const done = tasks.filter(t => t.done);
 
+  const interestVaultEntries = [...done]
+    .sort((a, b) => (new Date(b.deadlineRaw || 0).getTime() || b.id) - (new Date(a.deadlineRaw || 0).getTime() || a.id))
+    .slice(0, 6);
+
+  const activeThemeLabel = activeTheme.replace(/-/g, ' ').toUpperCase();
+
   // One filter, applied consistently everywhere (color + filter agree).
   const matchesFilter = (t) => matchesPinch(t, pinchFilter);
   const visibleAll = tasks.filter(matchesFilter);
@@ -1770,7 +1740,7 @@ export default function Dashboard() {
         role: m.sender === 'ai' ? 'assistant' : 'user',
         content: m.text
       }));
-      
+
       const response = await api.sendChatMessage(apiMessages);
       let aiText = '';
       if (typeof response === 'string') {
@@ -1784,7 +1754,7 @@ export default function Dashboard() {
       } else {
         aiText = JSON.stringify(response);
       }
-      
+
       setChatMessages(prev => [...prev, { sender: 'ai', text: aiText }]);
       fetchTasksAndBubble();
     } catch (err) {
@@ -1804,62 +1774,182 @@ export default function Dashboard() {
           <div className="d-logo">🧠</div>
           <span className="d-appname">DopaPal</span>
         </div>
-        <div className="d-titlebar-actions">
-          <button className="d-titlebar-btn" onClick={minimize}><IconMinus /></button>
-          <button className="d-titlebar-btn" onClick={maximize}><IconMaximize /></button>
-          <button className="d-titlebar-close" onClick={close}><IconClose /></button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+
+          <div className="d-titlebar-actions">
+            <button className="d-titlebar-btn" onClick={minimize}><IconMinus /></button>
+            <button className="d-titlebar-btn" onClick={maximize}><IconMaximize /></button>
+            <button className="d-titlebar-close" onClick={close}><IconClose /></button>
+          </div>
         </div>
       </div>
 
       {/* ── Sidebar ─────────────────────────────────────── */}
       <div className="d-layout">
-        <aside className="d-sidebar">
+        <aside className={`d-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
           <div className="d-sidebar-main">
+            <button
+              className="d-nav-btn d-sidebar-toggle"
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              title="Toggle Sidebar"
+              data-label="Toggle"
+              style={{ marginBottom: 8 }}
+            >
+              <IconMenu />
+              {!isSidebarCollapsed && <span className="d-nav-label">Menu</span>}
+            </button>
             {[
-              { id: 'home', label: t('dashboard.home'), Icon: IconHome },
-              { id: 'tasks', label: t('dashboard.allTasks'), Icon: IconTask },
-              { id: 'assistant', label: t('dashboard.assistant'), Icon: IconSparkle },
+              { id: 'home', label: 'Home', Icon: IconHome },
+              { id: 'tasks', label: 'Task Map', Icon: IconTask },
+              { id: 'assistant', label: 'AI Assistant', Icon: IconSparkle },
+              { id: 'audio-lab', label: 'Audio Lab', Icon: IconMusic },
             ].map(({ id, label, Icon }) => (
               <button
                 key={id}
                 className={`d-nav-btn${tab === id ? ' active' : ''}`}
                 onClick={() => setTab(id)}
+                data-label={label}
               >
                 <Icon />
-                <span>{label}</span>
+                <span className="d-nav-label">{label}</span>
               </button>
             ))}
           </div>
 
           <div className="d-sidebar-tools">
-            <button
-              className={`d-profile-nav${tab === 'profile' ? ' active' : ''}`}
-              onClick={() => {
-                setTab('profile');
-              }}
-              title="Profile"
-              aria-label="Profile"
-            >
-              <span className="d-profile-nav-avatar">{USER.avatar}</span>
-            </button>
-            <button
-              className={`d-icon-nav${tab === 'shop' ? ' active' : ''}`}
-              onClick={() => setTab('shop')}
-              title="Shop"
-              aria-label="Shop"
-            >
-              <IconShop />
-            </button>
-            <button
-              className={`d-icon-nav${tab === 'settings' ? ' active' : ''}`}
-              onClick={() => setTab('settings')}
-              title={t('dashboard.settings')}
-              aria-label={t('dashboard.settings')}
-            >
-              <IconSettings />
-            </button>
+            {[
+              { id: 'profile', label: 'Profile', Icon: IconBrain },
+              { id: 'shop', label: 'Shop', Icon: IconShop },
+              { id: 'settings', label: 'Settings', Icon: IconSettings },
+            ].map(({ id, label, Icon }) => (
+              id === 'profile' ? (
+                <button
+                  key={id}
+                  className={`d-profile-nav${tab === id ? ' active' : ''}`}
+                  onClick={() => setTab(id)}
+                  data-label={label}
+                  aria-label={label}
+                >
+                  <div className="d-profile-nav-avatar">{USER.avatar}</div>
+                </button>
+              ) : (
+                <button
+                  key={id}
+                  className={`d-icon-nav${tab === id ? ' active' : ''}`}
+                  onClick={() => setTab(id)}
+                  data-label={label}
+                  aria-label={label}
+                >
+                  <Icon />
+                </button>
+              )
+            ))}
           </div>
         </aside>
+
+        {showFloatingPlayer && !isPlayerDismissed && (
+          <div className="d-floating-player">
+            {(() => {
+              const ownedSounds = SHOP_ITEMS.filter(item => item.type === 'Music' && unlockedShopItems.includes(item.id));
+              const mixIds = customMixes.map(mix => `mix:${mix.id}`);
+              const ordered = [...ownedSounds.map(s => s.id), ...mixIds];
+              const displayMusic = activeMusic && activeMusic !== 'none' ? activeMusic : lastActiveMusic;
+              const idx = displayMusic ? ordered.indexOf(displayMusic) : -1;
+              const currentLabel = displayMusic ? getMusicLabel(displayMusic) : 'No audio';
+              return (
+                <div className="d-floating-player-inner">
+                  <button
+                    className={`d-floating-player-icon${audioPlayerRef.current ? ' playing' : ''}`}
+                    onClick={() => {
+                      if (audioPlayerRef.current) {
+                        setActiveMusic('none');
+                        localStorage.setItem('dopapal_active_music_v1', 'none');
+                      } else {
+                        setIsPlayerDismissed(false);
+                        setActiveMusic(activeMusic);
+                        localStorage.setItem('dopapal_active_music_v1', activeMusic);
+                      }
+                    }}
+                    title="Toggle Play"
+                  >
+                    <IconMusic />
+                  </button>
+
+                  <div className="d-floating-track-meta">
+                    <button
+                      className="d-floating-player-name"
+                      onClick={() => setTab('audio-lab')}
+                      title={currentLabel}
+                    >
+                      {currentLabel}
+                    </button>
+                    <span className="d-floating-player-status">{
+                      isAudioPlaying ? 'Now playing' :
+                        activeMusic && activeMusic !== 'none' ? 'Ready to play' :
+                          'Stopped'
+                    }</span>
+                  </div>
+
+                  <button
+                    className="d-floating-player-close"
+                    onClick={() => {
+                      setShowFloatingPlayer(false);
+                      setIsPlayerDismissed(true);
+                      setLastActiveMusic(null);
+                    }}
+                    title="Close player"
+                  >
+                    ✕
+                  </button>
+
+                  <div className="d-floating-player-controls">
+                    <button
+                      className="d-player-prev"
+                      onClick={() => {
+                        if (ordered.length === 0) return;
+                        const nextIdx = idx > 0 ? idx - 1 : ordered.length - 1;
+                        setActiveMusic(ordered[nextIdx]);
+                        localStorage.setItem('dopapal_active_music_v1', ordered[nextIdx]);
+                      }}
+                      title="Previous"
+                    >
+                      ⏮
+                    </button>
+                    <button
+                      className="d-player-play"
+                      onClick={() => {
+                        if (!audioPlayerRef.current) {
+                          setIsPlayerDismissed(false);
+                          const toPlay = displayMusic || activeMusic || (ordered[0] || 'none');
+                          setActiveMusic(toPlay);
+                          localStorage.setItem('dopapal_active_music_v1', toPlay);
+                        } else {
+                          setActiveMusic('none');
+                          localStorage.setItem('dopapal_active_music_v1', 'none');
+                        }
+                      }}
+                      title={audioPlayerRef.current ? 'Pause' : 'Play'}
+                    >
+                      {audioPlayerRef.current ? '⏸' : '▶'}
+                    </button>
+                    <button
+                      className="d-player-next"
+                      onClick={() => {
+                        if (ordered.length === 0) return;
+                        const nextIdx = idx < ordered.length - 1 ? idx + 1 : 0;
+                        setActiveMusic(ordered[nextIdx]);
+                        localStorage.setItem('dopapal_active_music_v1', ordered[nextIdx]);
+                      }}
+                      title="Next"
+                    >
+                      ⏭
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
         {/* ── Main content ──────────────────────────────── */}
         <main className="d-main">
@@ -1873,8 +1963,21 @@ export default function Dashboard() {
                   <h1 className="d-h1">{t('dashboard.goodEvening')}, {userName.split(' ')[0]} 👋</h1>
                   <p className="d-sub">{t('dashboard.letsCrush')}</p>
                 </div>
-                <div className={`d-streak ${streakAnim}`}>
-                  <span style={{ fontSize: '18px' }}>{streakEmoji}</span> <span>{streak} {t('dashboard.dayStreak')}</span>
+
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  <button
+                    className="d-btn d-btn--secondary"
+                    onClick={toggleTheme}
+                    title={`Switch to ${activeTheme === 'default' ? 'light' : 'dark'} theme`}
+                    aria-label={`Switch to ${activeTheme === 'default' ? 'light' : 'dark'} theme`}
+                    style={{ padding: '8px 14px', borderRadius: '999px' }}
+                  >
+                    {activeTheme === 'default' ? '☀️' : '🌙'}
+                  </button>
+                  <div className={`d-streak ${streakAnim}`}>
+                    <span style={{ fontSize: '18px' }}>{streakEmoji}</span> <span>{streak} {t('dashboard.dayStreak')}</span>
+                  </div>
                 </div>
               </div>
 
@@ -1887,7 +1990,7 @@ export default function Dashboard() {
                     <span className="d-chip">Now</span>
                   </div>
                   <h2 className="d-card-title">{bubbleTask.primary_block.task_title}</h2>
-                  <p className="d-card-reason">Based on your cognitive state ({bubbleTask.state_score}), this is the best task to tackle.</p>
+                  <p className="d-card-reason">Based on your current state, this is the best task to tackle.</p>
                   <div className="d-card-meta">
                     <span>⚡ {bubbleTask.mode === 'focused' ? 'High' : 'Low'} energy</span>
                     <span>⏱ {bubbleTask.primary_block.duration_minutes} min</span>
@@ -1907,26 +2010,36 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Today's tasks */}
+              {/* Today's tasks (Single Focus) */}
               <div className="d-card">
                 <div className="d-card-header">
                   <IconTask />
-                  <span>{t('dashboard.allTasks')}</span>
-                  <span className="d-chip">{pending.filter(t => t.due === 'Today').length} {t('dashboard.upNext')}</span>
+                  <span>Current Target</span>
                 </div>
                 {/* PINCH Filter */}
                 <PinchFilterBar value={pinchFilter} onChange={setPinchFilter} />
                 <div className="d-task-list">
                   {visibleAll.length === 0 ? (
                     <div className="d-task-empty">
-                      No tasks match the current filter. Try a different PINCH category or reset to "All".
+                      No targets match the current filter.
                     </div>
-                  ) : visibleAll.map(t => (
-                    <TaskRow key={t.id} task={t} onToggle={toggleTask} onDelete={requestDelete}
-                      onUpdateTask={updateTaskDetails} onToggleSub={toggleSubBlock}
-                      onUndoSub={undoSubBlock} onUpdateSub={updateSubBlockTitle}
-                      isDeleting={deletingIds.has(t.id)} />
-                  ))}
+                  ) : (
+                    <>
+                      <TaskRow key={visibleAll[0].id} task={visibleAll[0]} onToggle={toggleTask} onDelete={requestDelete}
+                        onUpdateTask={updateTaskDetails} onToggleSub={toggleSubBlock}
+                        isDeleting={deletingIds.has(visibleAll[0].id)} />
+                      {visibleAll.length > 1 && (
+                        <div className="d-task-optional">
+                          <p style={{ textAlign: 'center', margin: '20px 0 10px', fontSize: '13px', color: 'var(--text3)' }}>
+                            High energy day? Optional bonus target:
+                          </p>
+                          <TaskRow key={visibleAll[1].id} task={visibleAll[1]} onToggle={toggleTask} onDelete={requestDelete}
+                            onUpdateTask={updateTaskDetails} onToggleSub={toggleSubBlock}
+                            isDeleting={deletingIds.has(visibleAll[1].id)} />
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -1936,12 +2049,35 @@ export default function Dashboard() {
           {tab === 'tasks' && (
             <div className="d-section fade-in">
               <div className="d-section-header">
-                <h1 className="d-h1">All Tasks</h1>
+                <div>
+                  <h1 className="d-h1">Task Map</h1>
+                  <p className="d-sub">Full task context and pacing controls.</p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <button
+                    className="d-btn d-btn--secondary"
+                    onClick={() => equipTheme(activeTheme === 'default' ? 'calmed-light' : 'default')}
+                    title={`Switch to ${activeTheme === 'default' ? 'light' : 'dark'} theme`}
+                    aria-label={`Switch to ${activeTheme === 'default' ? 'light' : 'dark'} theme`}
+                    style={{ padding: '8px 14px', borderRadius: '999px' }}
+                  >
+                    {activeTheme === 'default' ? '☀️' : '🌙'}
+                  </button>
+                  <div className="d-state-chip">
+                    <span className={`d-state-dot d-state-dot--${stateTier}`} />
+                    <div>
+                      <div className="d-state-chip-title">Good morning energy</div>
+                      <div className="d-state-chip-note">{stateLabel}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="d-section-header">
                 <button className="d-btn d-btn--primary" style={{ gap: 6 }} onClick={() => {
                   setShowAddTaskModal(true);
                   setAddTaskView('options');
                 }}>
-                  <IconPlus /> Add Task
+                  <IconPlus /> Add Target
                 </button>
               </div>
 
@@ -1949,38 +2085,36 @@ export default function Dashboard() {
 
               {pending.length > 0 && (
                 <div className="d-card">
-                  <div className="d-card-header"><span>Pending</span><span className="d-chip">{visiblePending.length}</span></div>
+                  <div className="d-card-header"><span>Top Priority</span></div>
                   <div className="d-task-list">
                     {visiblePending.length === 0 ? (
-                      <div className="d-task-empty">No pending tasks match this filter.</div>
-                    ) : visiblePending.map(t => (
-                      <TaskRow key={t.id} task={t} onToggle={toggleTask} onDelete={requestDelete}
+                      <div className="d-task-empty">No pending targets match this filter.</div>
+                    ) : (
+                      <TaskRow key={visiblePending[0].id} task={visiblePending[0]} onToggle={toggleTask} onDelete={requestDelete}
                         onUpdateTask={updateTaskDetails} onToggleSub={toggleSubBlock}
-                        onUndoSub={undoSubBlock} onUpdateSub={updateSubBlockTitle}
-                        isDeleting={deletingIds.has(t.id)} />
-                    ))}
+                        isDeleting={deletingIds.has(visiblePending[0].id)} />
+                    )}
                   </div>
                 </div>
               )}
 
               {done.length > 0 && (
                 <div className="d-card" style={{ opacity: .7 }}>
-                  <div className="d-card-header"><span>Completed</span><span className="d-chip">{visibleDone.length}</span></div>
+                  <div className="d-card-header"><span>Recently Completed</span></div>
                   <div className="d-task-list">
                     {visibleDone.length === 0 ? (
-                      <div className="d-task-empty">No completed tasks match this filter.</div>
-                    ) : visibleDone.map(t => (
-                      <TaskRow key={t.id} task={t} onToggle={toggleTask} onDelete={requestDelete}
+                      <div className="d-task-empty">No completed targets match this filter.</div>
+                    ) : (
+                      <TaskRow key={visibleDone[0].id} task={visibleDone[0]} onToggle={toggleTask} onDelete={requestDelete}
                         onUpdateTask={updateTaskDetails} onToggleSub={toggleSubBlock}
-                        onUndoSub={undoSubBlock} onUpdateSub={updateSubBlockTitle}
-                        isDeleting={deletingIds.has(t.id)} />
-                    ))}
+                        isDeleting={deletingIds.has(visibleDone[0].id)} />
+                    )}
                   </div>
                 </div>
               )}
 
               {pending.length === 0 && done.length === 0 && (
-                <div className="d-task-empty">No tasks yet. Hit “Add Task” to create your first one.</div>
+                <div className="d-task-empty">No targets yet. Hit “Add Target” to create your first one.</div>
               )}
             </div>
           )}
@@ -1998,9 +2132,9 @@ export default function Dashboard() {
                     <h2 className="d-card-title">{userName}</h2>
                     <p className="d-card-reason">{USER.email}</p>
                     <div className="d-profile-tags">
-                      <span className="d-badge d-badge--accent">{USER.level}</span>
-                      <span className="d-badge">Language: {languageDraft.primary.toUpperCase()}</span>
-                      <span className="d-badge">Theme: {activeTheme}</span>
+                      <span className="d-badge d-badge--accent">{USER.level.toUpperCase()}</span>
+                      <span className="d-badge">LANGUAGE: {languageDraft.primary.toUpperCase()}</span>
+                      <span className="d-badge">THEME: {activeThemeLabel}</span>
                     </div>
                   </div>
                 </div>
@@ -2044,6 +2178,36 @@ export default function Dashboard() {
                     <p className="d-field-help">The currently selected background sound profile, or none if nothing is active.</p>
                     <div className="d-integration-summary">
                       <div><span className="d-integration-label">Music</span><strong>{activeMusic}</strong></div>
+                    </div>
+                    <div className="d-settings-pills" style={{ marginTop: 12 }}>
+                      {['Manual', 'Loop one', 'Auto cycle'].map(mode => (
+                        <button
+                          key={mode}
+                          className={`d-pill${audioMode === mode ? ' active' : ''}`}
+                          onClick={() => {
+                            setAudioMode(mode);
+                            localStorage.setItem('dopapal_audio_mode_v1', mode);
+                          }}
+                        >
+                          {mode}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: 14 }}>
+                      <span className="d-field-label">Audio volume</span>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={audioVolume}
+                        onChange={e => {
+                          const next = parseFloat(e.target.value);
+                          setAudioVolume(next);
+                          localStorage.setItem('dopapal_audio_volume_v1', String(next));
+                        }}
+                        style={{ width: '100%', marginTop: 8 }}
+                      />
                     </div>
                   </div>
                   <div>
@@ -2357,62 +2521,18 @@ export default function Dashboard() {
                   <div className="d-provider-grid">
                     {INTEGRATION_PROVIDERS.map(provider => {
                       const status = getIntegrationStatus(provider.id);
-                      const rawConnected = status.connected;
-                      const expired = status.is_expired;
-                      const connectedAndGood = rawConnected && !expired;
-
-                      // Provider-specific health checks
-                      const notionMissingDb = provider.id === 'notion' && rawConnected && !status.settings?.notion_database_id;
-                      const jiraMissingConfig = provider.id === 'jira' && rawConnected && !(status.settings?.jira_cloud_id || (status.settings?.jira_instance_url && status.settings?.jira_email));
-                      const needsReconnect = (rawConnected && expired) || notionMissingDb || jiraMissingConfig;
-
-                      const connected = connectedAndGood && !needsReconnect;
-
-                      let btnLabel = 'Connect';
-                      let btnAction = null;
-                      if (provider.id === 'google') {
-                        if (needsReconnect) { btnLabel = 'Reconnect'; btnAction = connectGoogle; }
-                        else if (connected) { btnLabel = 'Disconnect'; btnAction = disconnectGoogle; }
-                        else { btnLabel = 'Connect'; btnAction = connectGoogle; }
-                      } else if (provider.id === 'notion') {
-                        if (expired) { btnLabel = 'Reconnect'; btnAction = connectNotion; }
-                        else if (notionMissingDb) { btnLabel = 'Configure'; btnAction = () => openSyncSettings('notion'); }
-                        else if (connected) { btnLabel = 'Disconnect'; btnAction = disconnectNotion; }
-                        else { btnLabel = 'Connect'; btnAction = connectNotion; }
-                      } else if (provider.id === 'jira') {
-                        if (jiraMissingConfig) { btnLabel = 'Configure'; btnAction = connectJira; }
-                        else if (connected) { btnLabel = 'Disconnect'; btnAction = disconnectJira; }
-                        else { btnLabel = 'Connect'; btnAction = connectJira; }
-                      }
-
-                      let bg = 'var(--accent)';
-                      let txt = 'var(--text-white)';
-                      let bdr = 'none';
-                      if (provider.id === 'notion' && expired) {
-                        bg = '#ef4444'; txt = '#fff'; bdr = 'none';
-                      } else if (provider.id === 'notion' && notionMissingDb) {
-                        bg = '#f59e0b'; txt = '#fff'; bdr = 'none';
-                      } else if (provider.id === 'jira' && jiraMissingConfig) {
-                        bg = '#f59e0b'; txt = '#fff'; bdr = 'none';
-                      } else if (expired) {
-                        bg = '#ef4444'; txt = '#fff'; bdr = 'none';
-                      } else if (connected) {
-                        bg = 'var(--accent-dim)'; txt = 'var(--accent)'; bdr = '1px solid var(--accent)';
-                      }
-
+                      const connected = status.connected && !status.is_expired;
                       const LOGO_SIZE = 200;
-                      const logoEl = <img src={provider.logo} alt={provider.name} style={{ width: LOGO_SIZE, height: LOGO_SIZE, objectFit: 'contain' }} />;
+                      const logoEl = provider.id === 'google' ? <GoogleLogo size={LOGO_SIZE} /> :
+                        provider.id === 'notion' ? <NotionLogo size={LOGO_SIZE} /> : null;
                       const appIcons = {
                         'Tasks': <TaskListLogo size={13} />,
                         'Calendar': <CalendarLogo size={13} />,
                         'Gmail': <GmailLogo size={13} />,
-                        'Databases': <img src="/integrations/notion.svg" alt="Notion" style={{ width: 13, height: 13 }} />,
-                        'Issues': <img src="/integrations/jira.svg" alt="Jira" style={{ width: 13, height: 13 }} />,
-                        'Projects': <img src="/integrations/jira.svg" alt="Jira" style={{ width: 13, height: 13 }} />,
                       };
-                      const available = provider.id === 'google' || provider.id === 'notion' || provider.id === 'jira';
+                      const available = provider.id === 'google';
                       return (
-                        <div key={provider.id} className="d-provider-card" style={{ position: 'relative' }}>
+                        <div key={provider.id} className="d-provider-card">
                           <div className="d-provider-card-header">
                             <span className="d-provider-name">{provider.name}</span>
                             {available && (
@@ -2421,11 +2541,6 @@ export default function Dashboard() {
                               </button>
                             )}
                           </div>
-                          {needsReconnect && (
-                            <div style={{ position: 'absolute', top: 10, right: 44, fontSize: 11, background: expired ? '#ef4444' : '#f59e0b', color: '#fff', padding: '2px 8px', borderRadius: 8, fontWeight: 600 }}>
-                              {expired ? 'Expired' : 'Not configured'}
-                            </div>
-                          )}
                           <div className="d-provider-card-middle">
                             <div className="d-provider-logo">{logoEl}</div>
                           </div>
@@ -2438,14 +2553,14 @@ export default function Dashboard() {
                             ))}
                           </div>
                           <div className="d-provider-card-footer">
-                            {btnAction ? (
-                              <button className="d-btn d-btn--primary" onClick={btnAction} disabled={integrationSaving === provider.id} style={{
+                            {available ? (
+                              <button className="d-btn d-btn--primary" onClick={connected ? disconnectGoogle : connectGoogle} disabled={integrationSaving} style={{
                                 width: '100%',
-                                background: bg,
-                                color: txt,
-                                border: bdr
+                                background: connected ? 'var(--accent-dim)' : 'var(--accent)',
+                                color: connected ? 'var(--accent)' : 'var(--text-white)',
+                                border: connected ? '1px solid var(--accent)' : 'none'
                               }}>
-                                {integrationSaving === provider.id ? 'Working...' : btnLabel}
+                                {integrationSaving ? (connected ? 'Disconnecting...' : 'Connecting...') : (connected ? 'Disconnect' : 'Connect')}
                               </button>
                             ) : (
                               <button className="d-btn" disabled style={{ width: '100%', opacity: 0.4, background: 'var(--surface)', color: 'var(--text3)', border: '1px solid var(--accent-dim)' }}>
@@ -2476,126 +2591,77 @@ export default function Dashboard() {
               )}
             </div>
           )}
-          {tab === 'settings' && false && (
-            <div className="d-section fade-in">
-              <h1 className="d-h1">{t('dashboard.settings')}</h1>
-
-              {/* Language Selector */}
-              <div className="d-card" style={{ marginBottom: 16 }}>
-                <div className="d-card-header"><span>🌐</span><span>{t('dashboard.language')}</span></div>
-                <div style={{ display: 'flex', gap: 10, padding: '12px 0 0 0' }}>
-                  {[{ code: 'ar', label: 'العربية 🇸🇦' }, { code: 'en', label: 'English 🇬🇧' }].map(({ code, label }) => (
-                    <button
-                      key={code}
-                      onClick={() => changeLanguage(code)}
-                      style={{
-                        flex: 1, padding: '10px', borderRadius: '10px', cursor: 'pointer',
-                        border: lang === code ? '2px solid var(--accent)' : '1px solid var(--border)',
-                        background: lang === code ? 'var(--accent-dim)' : 'transparent',
-                        color: lang === code ? 'var(--accent)' : 'var(--text2)',
-                        fontWeight: lang === code ? 700 : 400,
-                        fontSize: '14px', transition: 'all 0.2s'
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="d-card">
-                <div className="d-card-header"><span>App Settings</span></div>
-                <div className="d-settings-list">
-                  {['Notifications', 'Privacy'].map(s => (
-                    <div
-                      key={s}
-                      className="d-setting-row"
-                      style={{ display: 'flex', justifyContent: 'space-between' }}
-                    >
-                      <span>{s}</span>
-                      {s === 'Notifications' ? (
-                        <div style={{ width: 36, height: 20, background: 'var(--accent)', borderRadius: 10, position: 'relative' }}>
-                          <div style={{ position: 'absolute', right: 2, top: 2, width: 16, height: 16, background: 'var(--text-white)', borderRadius: '50%' }}></div>
-                        </div>
-                      ) : (
-                        <span className="d-setting-arrow">›</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
 
           {tab === 'assistant' && (
-            <div className="d-section fade-in" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '10px 0' }}>
-              <div className="d-section-header" style={{ padding: '0 24px 12px 24px', borderBottom: '1px solid var(--border)', marginBottom: '0' }}>
-                <h1 className="d-h1" style={{ margin: 0, fontSize: '18px' }}>DopaPal Assistant</h1>
+            <div className="ai-chat-root fade-in">
+              {/* ── Header ── */}
+              <div className="ai-chat-header">
+                <div className="ai-chat-header-inner">
+                  <div className="ai-avatar-ring">
+                    <span className="ai-avatar-glyph">✦</span>
+                  </div>
+                  <div>
+                    <h1 className="ai-title">DopaPal AI</h1>
+                    <p className="ai-subtitle">Your ADHD-aware thinking partner</p>
+                  </div>
+                </div>
               </div>
 
-              <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {/* ── Messages ── */}
+              <div className="ai-messages-area">
+                {chatMessages.length === 0 && (
+                  <div className="ai-empty-state">
+                    <div className="ai-empty-glow">✦</div>
+                    <p className="ai-empty-title">How can I help today?</p>
+                    <p className="ai-empty-sub">Ask me to plan your day, break down a task, or just think out loud.</p>
+                    <div className="ai-suggestions">
+                      {["Break down my biggest task", "What should I focus on?", "I'm feeling overwhelmed"].map(s => (
+                        <button key={s} className="ai-suggestion-chip" onClick={() => { setChatInput(s); }}>
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {chatMessages.map((m, i) => (
-                  <div key={i} style={{
-                    alignSelf: m.sender === 'user' ? 'flex-end' : 'flex-start',
-                    background: m.sender === 'user' ? 'var(--accent)' : 'transparent',
-                    color: 'var(--text-white)', padding: '12px 16px', borderRadius: '16px',
-                    borderBottomRightRadius: m.sender === 'user' ? '4px' : '16px',
-                    borderBottomLeftRadius: m.sender === 'ai' ? '4px' : '16px',
-                    maxWidth: '80%', lineHeight: '1.4'
-                  }}>
-                    {m.sender === 'ai' ? <MarkdownRenderer content={m.text} /> : m.text}
+                  <div key={i} className={`ai-message ai-message--${m.sender}`}>
+                    {m.sender === 'ai' && (
+                      <div className="ai-msg-avatar">✦</div>
+                    )}
+                    <div className="ai-msg-bubble">
+                      {m.sender === 'ai' ? <MarkdownRenderer content={m.text} /> : m.text}
+                    </div>
                   </div>
                 ))}
                 {isTyping && (
-                  <div style={{ alignSelf: 'flex-start', background: 'transparent', color: 'var(--text3)', padding: '12px 16px', borderRadius: '16px', borderBottomLeftRadius: '4px' }}>
-                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center', height: '20px' }}>
-                      <span style={{ width: '6px', height: '6px', background: 'var(--text3)', borderRadius: '50%', animation: 'pulse 1.5s infinite' }}></span>
-                      <span style={{ width: '6px', height: '6px', background: 'var(--text3)', borderRadius: '50%', animation: 'pulse 1.5s infinite 0.2s' }}></span>
-                      <span style={{ width: '6px', height: '6px', background: 'var(--text3)', borderRadius: '50%', animation: 'pulse 1.5s infinite 0.4s' }}></span>
+                  <div className="ai-message ai-message--ai">
+                    <div className="ai-msg-avatar">✦</div>
+                    <div className="ai-msg-bubble ai-typing-bubble">
+                      <span className="ai-dot" style={{ animationDelay: '0s' }} />
+                      <span className="ai-dot" style={{ animationDelay: '0.18s' }} />
+                      <span className="ai-dot" style={{ animationDelay: '0.36s' }} />
                     </div>
                   </div>
                 )}
                 <div ref={chatEndRef} />
               </div>
 
-              <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', background: 'var(--overlay)' }}>
-                <div style={{ 
-                  display: 'flex', 
-                  gap: '8px', 
-                  background: 'transparent', 
-                  border: '1px solid var(--border)', 
-                  borderRadius: '24px', 
-                  padding: '6px 6px 6px 16px',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                  alignItems: 'center',
-                  transition: 'all 0.3s ease'
-                }}>
+              {/* ── Input bar ── */}
+              <div className="ai-input-bar">
+                <div className="ai-input-wrap">
                   <input
                     type="text"
                     value={chatInput}
                     onChange={e => setChatInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleSendChat()}
-                    placeholder="Message DopaPal AI..."
-                    style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text-white)', outline: 'none', fontSize: '14px' }}
+                    placeholder="Message DopaPal AI…"
+                    className="ai-input"
                   />
-                  <button 
-                    onClick={handleSendChat} 
+                  <button
+                    onClick={handleSendChat}
                     disabled={!chatInput.trim() || isTyping}
-                    style={{ 
-                      borderRadius: '50%', 
-                      width: '36px', 
-                      height: '36px', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      background: chatInput.trim() && !isTyping ? 'var(--accent)' : 'var(--surface)', 
-                      color: chatInput.trim() && !isTyping ? 'var(--text-white)' : 'var(--text3)', 
-                      border: 'none', 
-                      cursor: chatInput.trim() && !isTyping ? 'pointer' : 'default',
-                      transition: 'all 0.2s',
-                      boxShadow: chatInput.trim() && !isTyping ? '0 2px 10px var(--accent-dim)' : 'none'
-                    }}
-                    title="Send message"
+                    className={`ai-send-btn${chatInput.trim() && !isTyping ? ' active' : ''}`}
+                    title="Send"
                   >
                     <IconSend />
                   </button>
@@ -2604,10 +2670,10 @@ export default function Dashboard() {
             </div>
           )}
 
-          {tab === 'sync' && (
+          {tab === 'integrations' && (
             <div className="d-section fade-in" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '10px 0' }}>
               <div className="d-section-header" style={{ padding: '0 24px 12px 24px', borderBottom: '1px solid var(--border)', marginBottom: '0' }}>
-                <h1 className="d-h1" style={{ margin: 0, fontSize: '18px' }}>Sync</h1>
+                <h1 className="d-h1" style={{ margin: 0, fontSize: '18px' }}>Integrations</h1>
                 <span className="d-badge d-badge--accent">
                   {integrationStatuses.filter(status => status.connected).length}/{INTEGRATION_PROVIDERS.length} connected
                 </span>
@@ -2619,7 +2685,7 @@ export default function Dashboard() {
                   {INTEGRATION_PROVIDERS.map(provider => {
                     const status = getIntegrationStatus(provider.id);
                     return (
-                       <button
+                      <button
                         key={provider.id}
                         className={`d-integration-provider${selectedProvider === provider.id ? ' active' : ''}`}
                         onClick={() => {
@@ -2627,10 +2693,10 @@ export default function Dashboard() {
                           setIntegrationMessage('');
                         }}
                       >
-                        <img src={provider.logo} alt="" className="d-integration-logo" />
+                        <span className="d-integration-dot" style={{ background: status.connected ? 'var(--success)' : 'var(--text3)' }} />
                         <span>{provider.name}</span>
                         <span className={`d-integration-status ${status.connected ? 'connected' : ''}`}>
-                          {status.connected ? (status.is_expired ? 'Expired' : 'Connected') : 'Off'}
+                          {status.connected ? (status.is_expired ? 'Needs refresh' : 'Connected') : 'Off'}
                         </span>
                       </button>
                     );
@@ -2645,10 +2711,10 @@ export default function Dashboard() {
                     return (
                       <>
                         <div className="d-card-header">
-                          <img src={provider.logo} alt="" className="d-integration-logo d-integration-logo--lg" />
+                          <IconLink />
                           <span>{provider.name}</span>
                           <span className={`d-chip ${status.connected ? '' : 'd-chip--muted'}`}>
-                            {status.connected ? (status.is_expired ? 'Expired' : 'Connected') : 'Disconnected'}
+                            {status.connected ? (status.is_expired ? 'Needs refresh' : 'Connected') : 'Disconnected'}
                           </span>
                         </div>
 
@@ -2657,33 +2723,18 @@ export default function Dashboard() {
                             <span className="d-integration-label">Expires</span>
                             <strong>{expiresAt}</strong>
                           </div>
-                          {provider.id === 'jira' ? (
-                            <div>
-                              <span className="d-integration-label">Instance</span>
-                              <strong>{status.settings?.jira_instance_url || 'Not set'}</strong>
-                            </div>
-                          ) : (
-                            <div>
-                              <span className="d-integration-label">{provider.settingLabel}</span>
-                              <strong>{status.settings?.[provider.settingKey] || 'None'}</strong>
-                            </div>
-                          )}
+                          <div>
+                            <span className="d-integration-label">{provider.settingLabel}</span>
+                            <strong>{status.settings?.[provider.settingKey] || 'None'}</strong>
+                          </div>
                         </div>
 
                         {provider.id === 'google' ? (
                           <div className="d-modal-form">
                             <p className="d-field-help">Connect your Google account to sync Calendar events and scan Gmail for tasks.</p>
-                            <button className="d-btn d-btn--primary" onClick={connectGoogle} disabled={!!integrationSaving} style={{ alignSelf: 'stretch' }}>
-                              {integrationSaving === 'google' ? 'Connecting...' : (status.connected ? 'Reconnect Google' : 'Connect with Google')}
+                            <button className="d-btn d-btn--primary" onClick={connectGoogle} disabled={integrationSaving} style={{ alignSelf: 'stretch' }}>
+                              {integrationSaving ? 'Connecting...' : (status.connected ? 'Reconnect Google' : 'Connect with Google')}
                             </button>
-                          </div>
-                        ) : provider.id === 'jira' ? (
-                          <div className="d-modal-form">
-                            <p className="d-field-help">Connect your Jira account to sync issues as tasks.</p>
-                            <button className="d-btn d-btn--primary" onClick={connectJira} disabled={!!integrationSaving} style={{ alignSelf: 'stretch' }}>
-                              {integrationSaving === 'jira' ? 'Connecting...' : (status.connected ? 'Reconnect Jira' : 'Connect with Jira')}
-                            </button>
-                            {integrationMessage && <div className="d-integration-message">{integrationMessage}</div>}
                           </div>
                         ) : (
                           <form className="d-modal-form" onSubmit={submitIntegration}>
@@ -2718,8 +2769,8 @@ export default function Dashboard() {
                                 title="Token lifetime in seconds"
                               />
                             </div>
-                            <button className="d-btn d-btn--primary" disabled={!!integrationSaving || !integrationForm.accessToken.trim()} style={{ alignSelf: 'stretch' }}>
-                              {!!integrationSaving ? 'Saving...' : `Connect ${provider.name}`}
+                            <button className="d-btn d-btn--primary" disabled={integrationSaving || !integrationForm.accessToken.trim()} style={{ alignSelf: 'stretch' }}>
+                              {integrationSaving ? 'Saving...' : `Connect ${provider.name}`}
                             </button>
                           </form>
                         )}
@@ -2735,624 +2786,732 @@ export default function Dashboard() {
             </div>
           )}
 
+          {tab === 'audio-lab' && (
+            <div className="d-section fade-in" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '10px 0' }}>
+              <div className="d-section-header" style={{ padding: '0 24px 12px 24px', borderBottom: '1px solid var(--border)', marginBottom: '0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                  <div>
+                    <h1 className="d-h1" style={{ margin: 0, fontSize: '18px' }}>Audio Lab</h1>
+                    <div style={{ marginTop: '8px', color: 'var(--text3)', fontSize: '13px', maxWidth: '600px' }}>
+                      Control your focus ambience and audio playback settings.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div className="audio-lab-panel">
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', color: 'var(--text3)', marginBottom: '8px' }}>Current Sound</div>
+                    <strong style={{ fontSize: '16px', color: 'var(--accent)' }}>{activeMusic === 'none' ? 'None' : SHOP_ITEMS.find(item => item.id === activeMusic)?.name || activeMusic}</strong>
+                  </div>
+                  <button
+                    className="d-btn d-btn--secondary"
+                    onClick={() => { setActiveMusic('none'); localStorage.setItem('dopapal_active_music_v1', 'none'); }}
+                    style={{ alignSelf: 'flex-start' }}
+                  >
+                    Stop Audio
+                  </button>
+                </div>
+
+                <div className="audio-lab-panel">
+                  <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', color: 'var(--text3)', marginBottom: '12px' }}>Playback Mode</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                    {['Forever', 'Timed loop'].map(mode => (
+                      <button
+                        key={mode}
+                        className={`d-pill${audioMode === mode ? ' active' : ''}`}
+                        onClick={() => {
+                          setAudioMode(mode);
+                          localStorage.setItem('dopapal_audio_mode_v1', mode);
+                        }}
+                        type="button"
+                        style={{ padding: '10px 12px' }}
+                      >
+                        {mode}
+                      </button>
+                    ))}
+                  </div>
+                  {audioMode === 'Timed loop' && (
+                    <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <label style={{ fontSize: '12px', color: 'var(--text3)', minWidth: 120, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        Duration (minutes)
+                        <input
+                          type="number"
+                          min="1"
+                          value={audioLoopDuration}
+                          onChange={e => {
+                            const next = Math.max(1, parseInt(e.target.value, 10) || 1);
+                            setAudioLoopDuration(next);
+                            localStorage.setItem('dopapal_audio_loop_duration_v1', next);
+                          }}
+                          style={{ width: '72px', padding: '8px 10px', borderRadius: '10px', border: `1px solid ${overlayColor(0.18)}`, background: 'var(--surface)', color: 'var(--text)' }}
+                        />
+                      </label>
+                      <span style={{ color: 'var(--text3)', fontSize: '12px' }}>
+                        Audio will stop after {audioLoopDuration} minute{audioLoopDuration > 1 ? 's' : ''}.
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', color: 'var(--text3)', marginBottom: '12px' }}>Volume</div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={audioVolume}
+                    onChange={e => {
+                      const vol = parseFloat(e.target.value);
+                      setAudioVolume(vol);
+                      localStorage.setItem('dopapal_audio_volume_v1', vol);
+                    }}
+                    style={{ width: '100%', cursor: 'pointer', accentColor: 'var(--accent)' }}
+                  />
+                  <div style={{ marginTop: '8px', color: 'var(--text3)', fontSize: '12px', textAlign: 'right' }}>{Math.round(audioVolume * 100)}%</div>
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '14px', flexWrap: 'wrap' }}>
+                    <div>
+                      <div className="audio-lab-section-label">Owned Sounds</div>
+                      <div className="audio-lab-section-note">Tap a sound cartridge to play it.</div>
+                    </div>
+                  </div>
+
+                  <div className="audio-lab-grid">
+                    {ownedMusicItems.map(item => {
+                      const isActiveSound = activeMusic === item.id;
+                      return (
+                        <div
+                          key={item.id}
+                          className={`audio-lab-cartridge${isActiveSound ? ' active' : ''}`}
+                          onClick={() => handleOwnedItemSelection(item)}
+                          style={{ textAlign: 'left' }}
+                        >
+                          <div className="audio-lab-cartridge-head">
+                            <div className="audio-lab-cartridge-left">
+                              <div className="audio-lab-cartridge-icon" style={{ background: item.accent ? `${item.accent}22` : overlayColor(0.08), color: item.accent || 'var(--accent)' }}>
+                                {isActiveSound ? <IconEqualizer size={18} /> : <IconMusic size={18} />}
+                              </div>
+                              <div className="audio-lab-cartridge-text">
+                                <div className="audio-lab-cartridge-title">{item.name}</div>
+                                <div className="audio-lab-cartridge-meta">{item.description}</div>
+                              </div>
+                            </div>
+                            <div className="audio-lab-cartridge-actions">
+                              <button
+                                type="button"
+                                className="audio-lab-cartridge-button"
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  handleOwnedItemSelection(item);
+                                }}
+                                title={isActiveSound ? 'Stop audio' : 'Play audio'}
+                              >
+                                {isActiveSound ? <IconStop size={16} /> : <IconPlay size={16} />}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {ownedMusicItems.length === 0 && (
+                    <div style={{ padding: '18px', background: overlayColor(0.04), border: `1px solid ${overlayColor(0.07)}`, borderRadius: '18px', color: 'var(--text3)', textAlign: 'center' }}>
+                      Unlock at least 2 sounds in the Audio Lab to start mixing.
+                    </div>
+                  )}
+                </div>
+
+                <div className="audio-mix-builder">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '14px', flexWrap: 'wrap' }}>
+                    <div>
+                      <div className="audio-lab-section-label">Mixed Sounds</div>
+                      <div className="audio-lab-section-note">Create a reusable blend of up to five owned sounds. Click a slot's popover to add or change sounds.</div>
+                    </div>
+                  </div>
+
+                  <div className="audio-mix-actions">
+                    <div className="audio-mix-slots">
+                      {mixBuilderSounds.map((selectedId, index) => {
+                        const filledCount = mixBuilderSounds.filter(id => id).length;
+                        return (
+                          <MixSlot
+                            key={index}
+                            index={index}
+                            selectedSoundId={selectedId}
+                            onAssign={(soundId) => assignMixSlot(index, soundId)}
+                            onClear={() => clearMixSlot(index)}
+                            onRemoveSlot={() => removeMixSlot(index)}
+                            ownedSounds={ownedMusicItems}
+                            getSlotLabel={getSlotLabel}
+                            getMusicName={getMusicName}
+                            totalFilledSlots={filledCount}
+                            totalSlots={mixBuilderSounds.length}
+                          />
+                        );
+                      })}
+
+                      <button type="button" className="audio-mix-slot-add" onClick={addMixSlot}>
+                        + Add another sound to mix
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="audio-mix-builder-inputs">
+                    <input
+                      type="text"
+                      value={mixBuilderName}
+                      onChange={e => { setMixBuilderName(e.target.value.slice(0, 24)); setMixBuilderError(''); }}
+                      disabled={ownedMusicItems.length < 1}
+                      placeholder="e.g. Rainy Focus"
+                      style={{ padding: '14px 16px', borderRadius: '14px', border: `1px solid ${overlayColor(0.12)}`, background: 'var(--surface)', color: 'var(--text)', width: '100%' }}
+                    />
+                    {mixBuilderError && <div style={{ color: '#f59e0b', fontSize: '12px' }}>{mixBuilderError}</div>}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                      <button
+                        className="d-btn d-btn--primary"
+                        onClick={saveCustomMix}
+                        disabled={ownedMusicItems.length < 1 || !mixBuilderName.trim() || mixBuilderSounds.filter(Boolean).length < 2 || customMixes.length >= 10}
+                        style={{ minWidth: '160px' }}
+                      >
+                        Save & Play
+                      </button>
+                      <div className="audio-mix-builder-note" style={{ flex: '1 1 180px' }}>
+                        {ownedMusicItems.length < 1
+                          ? 'Unlock at least one sound to start mixing.'
+                          : 'Pick 2 or more different sounds, name the mix, and save it.'}
+                      </div>
+                    </div>
+                    {customMixes.length >= 10 && (
+                      <div style={{ color: 'var(--text3)', fontSize: '12px' }}>Mix limit reached — delete a mix to save a new one.</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="audio-lab-grid">
+                  {customMixes.map(mix => {
+                    const isActive = activeMusic === `mix:${mix.id}`;
+                    return (
+                      <div key={mix.id} className={`audio-lab-cartridge${isActive ? ' active' : ''}`} onClick={() => handleMixToggle(mix.id)} style={{ textAlign: 'left' }}>
+                        <div className="audio-lab-cartridge-head">
+                          <div className="audio-lab-cartridge-icon">
+                            <IconEqualizer size={18} />
+                          </div>
+                          <span className={`audio-lab-chip${isActive ? ' active' : ''}`}>
+                            {isActive ? 'Playing' : 'Mix'}
+                          </span>
+                        </div>
+                        <div className="audio-lab-cartridge-title">{mix.name}</div>
+                        <div className="audio-lab-cartridge-meta">{(mix.sounds || [mix.sound_a, mix.sound_b]).filter(Boolean).map(getMusicName).join(' + ')}</div>
+                        <div className="audio-lab-cartridge-actions">
+                          <button
+                            type="button"
+                            className="audio-lab-cartridge-button"
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleMixToggle(mix.id);
+                            }}
+                            title={isActive ? 'Stop mix' : 'Play mix'}
+                          >
+                            {isActive ? <IconStop size={16} /> : <IconPlay size={16} />}
+                          </button>
+                          {deleteConfirmId === mix.id ? (
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                              <span style={{ color: 'var(--text3)', fontSize: '12px' }}>Remove?</span>
+                              <button onClick={() => deleteCustomMix(mix.id)} style={{ background: 'transparent', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '12px' }}>Yes</button>
+                              <button onClick={() => setDeleteConfirmId(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: '12px' }}>No</button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={e => { e.stopPropagation(); setDeleteConfirmId(mix.id); }}
+                              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: '8px', borderRadius: '10px', fontSize: '14px' }}
+                              title="Delete mix"
+                            >
+                              🗑
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
           {tab === 'shop' && (
             <div className="d-section fade-in" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '10px 0' }}>
               <div className="d-section-header" style={{ padding: '0 24px 12px 24px', borderBottom: '1px solid var(--border)', marginBottom: '0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                  <h1 className="d-h1" style={{ margin: 0, fontSize: '18px' }}>Shop</h1>
-                  <div className="d-streak" style={{ background: 'rgba(251,191,36,0.1)', color: 'var(--med)', border: '1px solid rgba(251,191,36,0.3)', padding: '4px 12px', borderRadius: '16px' }}>
+                  <div>
+                    <h1 className="d-h1" style={{ margin: 0, fontSize: '18px' }}>Shop</h1>
+                    <div style={{ marginTop: '8px', color: 'var(--text3)', fontSize: '13px', maxWidth: '600px' }}>
+                      Spend completion points on themes, cosmetics, and Audio Lab in one consistent shelf.
+                    </div>
+                  </div>
+                  <div className="d-streak" style={{ background: 'rgba(251,191,36,0.1)', color: 'var(--med)', border: '1px solid rgba(251,191,36,0.3)', padding: '8px 14px', borderRadius: '16px' }}>
                     <IconSparkle /> <span style={{ fontWeight: 600 }}>{userXp} XP</span>
                   </div>
                 </div>
               </div>
 
               {purchaseError && (
-                <div style={{ margin: '16px 24px 0 24px', padding: '12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: 'var(--error)', borderRadius: '8px', textAlign: 'center', fontSize: '14px', fontWeight: 500 }}>
+                <div style={{ margin: '16px 24px 0 24px', padding: '12px', background: 'rgba(var(--high-rgb), 0.1)', border: '1px solid rgba(var(--high-rgb), 0.3)', color: 'var(--high)', borderRadius: '8px', textAlign: 'center', fontSize: '14px', fontWeight: 500 }}>
                   {purchaseError}
                 </div>
               )}
 
-              <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {THEMES.map(t => {
-                  const isUnlocked = unlockedThemes.includes(t.id);
-                  const isActive = activeTheme === t.id;
-                  return (
-                    <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: 'var(--surface2)', borderRadius: '12px', border: isActive ? `2px solid ${t.accent}` : '1px solid var(--border)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: `linear-gradient(135deg, ${t.accent}, ${t.dim})`, border: '2px solid var(--border)' }}></div>
-                        <div>
-                          <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-white)' }}>{t.name}</div>
-                          {!isUnlocked && (
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.2)', color: 'var(--med)', padding: '4px 8px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, marginTop: '6px' }}>
-                              <IconSparkle size={12} /> {t.cost} XP
-                            </div>
-                          )}
-                          {isUnlocked && <div style={{ fontSize: '13px', color: 'var(--success)', marginTop: '6px', fontWeight: 500 }}>✓ Unlocked</div>}
-                        </div>
-                      </div>
+              <div style={{ margin: '16px 24px', padding: '18px', borderRadius: '18px', background: 'rgba(251,191,36,.08)', border: '1px solid rgba(251,191,36,.18)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ fontSize: '32px', fontWeight: 700, color: 'var(--med)' }}>{streak}</div>
+                  <div>
+                    <div style={{ color: 'var(--text2)', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '.5px', fontWeight: 700 }}>Streak</div>
+                    <div style={{ fontSize: '13px', color: 'var(--text3)' }}>Thursday's gap didn't count against you.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div className="d-shop-section-title">
+                  <IconSparkle />
+                  <span>Interest Vault</span>
+                </div>
+                <div className="d-shop-vault">
+                  {interestVaultEntries.length === 0 && (
+                    <div className="d-shop-vault-empty">No completed items yet. Finish a task and return to see your recent history.</div>
+                  )}
+                  {interestVaultEntries.map(task => (
+                    <div key={task.id} className="d-shop-vault-item">
+                      <span className="d-shop-vault-dot" style={{ background: getInterestDotColor(task) }} />
                       <div>
-                        {isActive ? (
-                          <button className="d-btn d-btn--secondary" disabled style={{ background: 'transparent', border: `1px solid ${t.accent}`, color: t.accent }}>Equipped</button>
-                        ) : isUnlocked ? (
-                          <button className="d-btn" onClick={() => equipTheme(t.id)} style={{ background: t.accent }}>Equip</button>
-                        ) : (
-                          <button className="d-btn" onClick={() => buyTheme(t.id, t.cost)} style={{ background: 'var(--med)', color: 'var(--bg)' }}>
-                            Buy Theme
-                          </button>
-                        )}
+                        <div className="d-shop-vault-label">{formatVaultCaption(task)}</div>
+                        <div className="d-shop-vault-meta">{task.priority ? `${task.priority.charAt(0).toUpperCase() + task.priority.slice(1)} priority` : ''}</div>
                       </div>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+
+                <div className="d-shop-section-title">
+                  <IconSparkle />
+                  <span>Themes</span>
+                </div>
+                <div className="d-shop-grid">
+                  {SHOP_THEME_SWATCHES.map(t => {
+                    const isUnlocked = unlockedThemes.includes(t.id);
+                    const isActive = activeTheme === t.id;
+                    return (
+                      <div key={t.id} className={`d-shop-item d-theme-card${!isUnlocked ? ' locked' : ''}`} style={{ borderColor: isActive ? t.accent : 'var(--border)', opacity: isUnlocked ? 1 : 0.65 }}>
+                        <div className="d-theme-swatch" style={{ background: `linear-gradient(135deg, ${t.accent}, ${t.dim})` }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div className="d-shop-item-title">{t.name}</div>
+                          <div className="d-shop-item-desc">{isUnlocked ? 'Available theme palette' : getThemeLockNote(t)}</div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                          {isUnlocked ? (
+                            isActive ? (
+                              <button className="d-btn d-btn--secondary" disabled style={{ background: 'transparent', border: `1px solid ${t.accent}`, color: t.accent }}>Equipped</button>
+                            ) : (
+                              <button className="d-btn" onClick={() => equipTheme(t.id)} style={{ background: t.accent }}>Equip</button>
+                            )
+                          ) : (
+                            <button className="d-btn" onClick={() => buyTheme(t.id, t.cost)} style={{ background: 'var(--med)', color: 'var(--bg)' }}>
+                              <IconLock size={14} /> Buy {t.cost}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
 
                 <div className="d-shop-section-title">
                   <IconMusic />
-                  <span>Music & Visuals</span>
+                  <span>Audio Lab</span>
+                </div>
+                <div className="d-shop-grid">
+                  {SHOP_ITEMS.filter(item => item.type === 'Music').map(item => {
+                    const isUnlocked = unlockedShopItems.includes(item.id);
+                    const isActive = activeMusic === item.id;
+                    return (
+                      <div key={item.id} className="d-shop-item" style={{ borderColor: isActive ? item.accent : 'var(--border)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0 }}>
+                          <div className="d-shop-item-icon" style={{ color: item.accent, background: `${item.accent}22` }}>
+                            <IconMusic />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="d-shop-item-title">{item.name}</div>
+                            <div className="d-shop-item-desc">{item.description}</div>
+                            {!isUnlocked && (
+                              <div className="d-shop-price">
+                                <IconSparkle size={12} /> {item.cost} XP
+                              </div>
+                            )}
+                            {isUnlocked && <div className="d-shop-owned">Unlocked</div>}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          {isActive ? (
+                            <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: item.accent, padding: '6px', borderRadius: '6px', transition: 'background 0.14s ease-out' }} onClick={() => { setActiveMusic('none'); localStorage.setItem('dopapal_active_music_v1', 'none'); }} onMouseEnter={e => e.target.style.background = `${item.accent}22`} onMouseLeave={e => e.target.style.background = 'transparent'} title="Stop audio"><IconStop size={18} /></button>
+                          ) : isUnlocked ? (
+                            <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: item.accent, padding: '6px', borderRadius: '6px', transition: 'background 0.14s ease-out' }} onClick={() => equipShopItem(item)} onMouseEnter={e => e.target.style.background = `${item.accent}22`} onMouseLeave={e => e.target.style.background = 'transparent'} title="Play audio"><IconPlay size={18} /></button>
+                          ) : (
+                            <button className="d-btn" onClick={() => buyShopItem(item.id, item.cost)} style={{ background: 'var(--med)', color: 'var(--bg)' }}>
+                              Buy
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
-                {SHOP_ITEMS.map(item => {
-                  const isUnlocked = unlockedShopItems.includes(item.id);
-                  const isActive = item.type === 'Music' ? activeMusic === item.id : activeVisual === item.id;
-                  return (
-                    <div key={item.id} className="d-shop-item" style={{ borderColor: isActive ? item.accent : 'var(--border)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0 }}>
-                        <div className="d-shop-item-icon" style={{ color: item.accent, background: `${item.accent}22` }}>
-                          {item.type === 'Music' ? <IconMusic /> : <IconSparkle />}
+                <div className="d-shop-section-title">
+                  <IconSparkle />
+                  <span>Visuals</span>
+                </div>
+                <div className="d-shop-grid">
+                  {SHOP_ITEMS.filter(item => item.type === 'Visual').map(item => {
+                    const isUnlocked = unlockedShopItems.includes(item.id);
+                    const isActive = activeVisual === item.id;
+                    return (
+                      <div key={item.id} className="d-shop-item" style={{ borderColor: isActive ? item.accent : 'var(--border)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0 }}>
+                          <div className="d-shop-item-icon" style={{ color: item.accent, background: `${item.accent}22` }}>
+                            <IconSparkle />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="d-shop-item-title">{item.name}</div>
+                            <div className="d-shop-item-desc">{item.description}</div>
+                            {!isUnlocked && (
+                              <div className="d-shop-price">
+                                <IconSparkle size={12} /> {item.cost} XP
+                              </div>
+                            )}
+                            {isUnlocked && <div className="d-shop-owned">Unlocked</div>}
+                          </div>
                         </div>
-                        <div style={{ minWidth: 0 }}>
-                          <div className="d-shop-item-title">{item.name}</div>
-                          <div className="d-shop-item-desc">{item.description}</div>
-                          {!isUnlocked && (
-                            <div className="d-shop-price">
-                              <IconSparkle size={12} /> {item.cost} XP
-                            </div>
+                        <div>
+                          {isActive ? (
+                            <button className="d-btn d-btn--secondary" onClick={() => { setActiveVisual('none'); localStorage.setItem('dopapal_active_visual_v1', 'none'); }} style={{ background: 'transparent', border: `1px solid ${item.accent}`, color: item.accent }}>Stop</button>
+                          ) : isUnlocked ? (
+                            <button className="d-btn" onClick={() => equipShopItem(item)} style={{ background: item.accent, color: item.accent === '#fbbf24' ? 'var(--bg)' : 'var(--text-white)' }}>Use</button>
+                          ) : (
+                            <button className="d-btn" onClick={() => buyShopItem(item.id, item.cost)} style={{ background: 'var(--med)', color: 'var(--bg)' }}>
+                              Buy
+                            </button>
                           )}
-                          {isUnlocked && <div className="d-shop-owned">Unlocked</div>}
                         </div>
                       </div>
-                      <div>
-                        {isActive ? (
-                          <button className="d-btn d-btn--secondary" disabled style={{ background: 'transparent', border: `1px solid ${item.accent}`, color: item.accent }}>Active</button>
-                        ) : isUnlocked ? (
-                          <button className="d-btn" onClick={() => equipShopItem(item)} style={{ background: item.accent, color: item.accent === '#fbbf24' ? 'var(--bg)' : 'var(--text-white)' }}>Use</button>
-                        ) : (
-                          <button className="d-btn" onClick={() => buyShopItem(item.id, item.cost)} style={{ background: 'var(--med)', color: 'var(--bg)' }}>
-                            Buy
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}
 
         </main>
-      </div>
+      </div >
 
-      {floatingEmojis.map(f => (
-        <div key={f.id} className={`d-floating-emoji ${f.type}`} style={{ left: f.x - 16, top: f.y - 16 }}>
-          {f.emoji}
-        </div>
-      ))}
+      {
+        floatingEmojis.map(f => (
+          <div key={f.id} className={`d-floating-emoji ${f.type}`} style={{ left: f.x - 16, top: f.y - 16 }}>
+            {f.emoji}
+          </div>
+        ))
+      }
 
       {/* ══ DELETE CONFIRMATION ══ */}
-      {confirmDeleteId != null && (
-        <div className="d-modal-overlay fade-in" onClick={() => setConfirmDeleteId(null)}>
-          <div className="d-confirm" onClick={e => e.stopPropagation()}>
-            <div className="d-confirm-icon"><IconTrash /></div>
-            <h2 className="d-confirm-title">Delete this task?</h2>
-            <p className="d-confirm-text">
-              {(() => {
-                const tk = tasks.find(t => t.id === confirmDeleteId);
-                return tk ? `“${tk.title}” and its steps will be removed. This can't be undone.`
-                  : "This task and its steps will be removed. This can't be undone.";
-              })()}
-            </p>
-            <div className="d-confirm-actions">
-              <button className="d-btn d-btn--secondary" onClick={() => setConfirmDeleteId(null)}>Cancel</button>
-              <button className="d-btn d-confirm-delete" onClick={performDelete}>Delete</button>
+      {
+        confirmDeleteId != null && (
+          <div className="d-modal-overlay fade-in" onClick={() => setConfirmDeleteId(null)}>
+            <div className="d-confirm" onClick={e => e.stopPropagation()}>
+              <div className="d-confirm-icon"><IconTrash /></div>
+              <h2 className="d-confirm-title">Delete this task?</h2>
+              <p className="d-confirm-text">
+                {(() => {
+                  const tk = tasks.find(t => t.id === confirmDeleteId);
+                  return tk ? `“${tk.title}” and its steps will be removed. This can't be undone.`
+                    : "This task and its steps will be removed. This can't be undone.";
+                })()}
+              </p>
+              <div className="d-confirm-actions">
+                <button className="d-btn d-btn--secondary" onClick={() => setConfirmDeleteId(null)}>Cancel</button>
+                <button className="d-btn d-confirm-delete" onClick={performDelete}>Delete</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* ══ TOASTS (background add / update / delete feedback) ══ */}
-      {toasts.length > 0 && (
-        <div className="d-toast-stack">
-          {toasts.map(toast => (
-            <div key={toast.id} className={`d-toast d-toast--${toast.kind}`}>
-              {toast.kind === 'loading' && <span className="d-toast-spinner" />}
-              {toast.kind === 'success' && <span className="d-toast-mark"><IconCheck /></span>}
-              <span>{toast.text}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      {
+        toasts.length > 0 && (
+          <div className="d-toast-stack">
+            {toasts.map(toast => (
+              <div key={toast.id} className={`d-toast d-toast--${toast.kind}`}>
+                {toast.kind === 'loading' && <span className="d-toast-spinner" />}
+                {toast.kind === 'success' && <span className="d-toast-mark"><IconCheck /></span>}
+                <span>{toast.text}</span>
+              </div>
+            ))}
+          </div>
+        )
+      }
 
       {/* ══ ADD TASK MODAL ══ */}
-      {showAddTaskModal && (
-        <div className="d-modal-overlay fade-in" onClick={() => { setShowAddTaskModal(false); setIsVoiceTask(false); }}>
-          <div className="d-modal-content" onClick={e => e.stopPropagation()}>
-            <div className="d-modal-header">
-              <h2 className="d-h1">{addTaskView === 'options' ? t('bubble.newTask') : (addTaskView === 'manual' ? t('bubble.manualEntry') : t('bubble.aiSmartInput'))}</h2>
-              <button className="d-modal-close" onClick={() => { setShowAddTaskModal(false); setIsVoiceTask(false); }}>
-                <IconClose />
-              </button>
-            </div>
-
-            {addTaskView === 'options' && (
-              <div className="d-modal-options">
-                <button className="d-modal-btn" onClick={() => setAddTaskView('ai')}>
-                  <div className="d-modal-icon" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}><IconSparkle /></div>
-                  <div className="d-modal-text">
-                    <strong>{t('bubble.aiSmartInput')}</strong>
-                    <span>{t('bubble.aiSmartInputDesc')}</span>
-                  </div>
-                </button>
-                <button className="d-modal-btn" onClick={isRecording ? stopRecording : startRecording}>
-                  <div className="d-modal-icon" style={{ background: isRecording ? 'rgba(239,68,68,.15)' : 'rgba(56,189,248,.15)', color: isRecording ? 'var(--error)' : '#38bdf8' }}>
-                    {isRecording ? <div className="b-dot" style={{ background: 'var(--error)', width: 12, height: 12, borderRadius: '50%' }} /> : <IconMic />}
-                  </div>
-                  <div className="d-modal-text">
-                    <strong>{isRecording ? "Recording... Click to stop" : t('bubble.voiceMemo')}</strong>
-                    <span>{t('bubble.voiceMemoDesc')}</span>
-                  </div>
-                </button>
-                <button className="d-modal-btn" onClick={() => setAddTaskView('manual')}>
-                  <div className="d-modal-icon" style={{ background: 'rgba(249,115,22,.15)', color: '#f97316' }}><IconKeyboard /></div>
-                  <div className="d-modal-text">
-                    <strong>{t('bubble.manualEntry')}</strong>
-                    <span>{t('bubble.manualEntryDesc')}</span>
-                  </div>
+      {
+        showAddTaskModal && (
+          <div className="d-modal-overlay fade-in" onClick={() => { setShowAddTaskModal(false); setIsVoiceTask(false); }}>
+            <div className="d-modal-content" onClick={e => e.stopPropagation()}>
+              <div className="d-modal-header">
+                <h2 className="d-h1">{addTaskView === 'options' ? t('bubble.newTask') : (addTaskView === 'manual' ? t('bubble.manualEntry') : t('bubble.aiSmartInput'))}</h2>
+                <button className="d-modal-close" onClick={() => { setShowAddTaskModal(false); setIsVoiceTask(false); }}>
+                  <IconClose />
                 </button>
               </div>
-            )}
 
-            {addTaskView === 'ai' && (
-              <div className="d-modal-form">
-                <textarea className="d-input" style={{ minHeight: '120px', resize: 'vertical' }} placeholder="Type or paste your unstructured task here..." value={aiText} onChange={e => setAiText(e.target.value)} autoFocus />
-                <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-                  <button className="d-btn d-btn--secondary" onClick={() => setAddTaskView('options')} style={{ flex: 1 }}>Back</button>
-                  <button className="d-btn d-btn--primary" onClick={() => submitNewTask('ai')} disabled={isSubmittingTask || !aiText.trim()} style={{ flex: 2 }}>
-                    {isSubmittingTask ? 'Processing...' : 'Extract & Add Task'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {addTaskView === 'manual' && (
-              <div className="d-modal-form">
-                <input className="d-input" placeholder={t('bubble.taskPlaceholder')} value={taskData.title} onChange={e => setTaskData({ ...taskData, title: e.target.value })} autoFocus />
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    className="d-input"
-                    placeholder={t('bubble.durationPlaceholder')}
-                    value={taskData.duration}
-                    onChange={e => setTaskData({ ...taskData, duration: e.target.value })}
-                    style={{ flex: 1 }}
-                  />
-                  <button
-                    onClick={() => setTaskData({ ...taskData, duration: '30m' })}
-                    style={{
-                      padding: '8px 16px',
-                      background: 'var(--accent)',
-                      color: 'var(--text-white)',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      alignSelf: 'stretch'
-                    }}
-                  >
-                    30m
-                  </button>
-                  <button
-                    onClick={() => setTaskData({ ...taskData, duration: '1h' })}
-                    style={{
-                      padding: '8px 16px',
-                      background: 'var(--accent)',
-                      color: 'var(--text-white)',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      alignSelf: 'stretch'
-                    }}
-                  >
-                    1h
-                  </button>
-                  <button
-                    onClick={() => setTaskData({ ...taskData, duration: '2h' })}
-                    style={{
-                      padding: '8px 16px',
-                      background: 'var(--accent)',
-                      color: 'var(--text-white)',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      alignSelf: 'stretch'
-                    }}
-                  >
-                    2h
-                  </button>
-                </div>
-                <input className="d-input" placeholder={t('bubble.dueDatePlaceholder')} value={taskData.due} onChange={e => setTaskData({ ...taskData, due: e.target.value })} />
-                <textarea className="d-input" placeholder={t('bubble.notesPlaceholder')} value={taskData.notes} onChange={e => setTaskData({ ...taskData, notes: e.target.value })} />
-                <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-                  <button className="d-btn d-btn--secondary" onClick={() => setAddTaskView('options')} style={{ flex: 1 }}>Back</button>
-                  <button className="d-btn d-btn--primary" onClick={() => submitNewTask('manual')} disabled={isSubmittingTask || !taskData.title.trim()} style={{ flex: 2 }}>
-                    {isSubmittingTask ? 'Saving...' : t('bubble.createTask')}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Sync settings modal ── */}
-      {(syncSettingsModal || syncSettingsClosing) && (
-        <div className={`d-modal-overlay${syncSettingsClosing ? ' closing' : ''}`} onClick={closeSyncSettings}>
-          <div className={`d-modal-content${syncSettingsClosing ? ' closing' : ''}`} onClick={e => e.stopPropagation()} style={{ maxWidth: syncSettingsModal === 'notion' ? 500 : 540, maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
-            <div className="d-modal-header">
-              <span style={{ fontWeight: 600, fontSize: 16 }}>
-                {syncSettingsModal === 'notion' ? 'Notion Sync Settings' : syncSettingsModal === 'jira' ? 'Jira Sync Settings' : 'Google Sync Settings'}
-              </span>
-              <button className="d-modal-close" onClick={closeSyncSettings}>×</button>
-            </div>
-            <div className="d-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 0, padding: 0, overflowY: 'auto', flex: 1 }}>
-              {syncSettingsLoading ? (
-                <div style={{ padding: '40px 24px', color: 'var(--text2)', textAlign: 'center' }}>Loading...</div>
-              ) : syncSettingsModal === 'notion' ? (
-                (() => {
-                  const set = (path, val) => {
-                    setSyncSettingsDraft(prev => {
-                      const copy = JSON.parse(JSON.stringify(prev));
-                      const parts = path.split('.');
-                      let cur = copy;
-                      for (let i = 0; i < parts.length - 1; i++) {
-                        if (!cur[parts[i]]) cur[parts[i]] = {};
-                        cur = cur[parts[i]];
-                      }
-                      cur[parts[parts.length - 1]] = val;
-                      return copy;
-                    });
-                  };
-                  const d = syncSettingsDraft;
-                  return (
-                    <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <span className="d-field-label">Database</span>
-                        <p className="d-field-help" style={{ margin: 0 }}>Select which Notion database to sync tasks from.</p>
-                        {notionDatabasesLoading ? (
-                          <div style={{ color: 'var(--text2)', fontSize: 13, padding: '8px 0' }}>Loading databases...</div>
-                        ) : availableDatabases.length > 0 ? (
-                          <select
-                            className="d-input"
-                            style={{ appearance: 'auto' }}
-                            value={d.notion_database_id || ''}
-                            onChange={async e => {
-                              const dbId = e.target.value;
-                              set('notion_database_id', dbId);
-                              if (dbId) {
-                                const picked = availableDatabases.find(db => db.id === dbId);
-                                if (picked) pushToast(`Selected: ${picked.title}`, 'success');
-                                setNotionSchemaLoading(true);
-                                try {
-                                  const res = await api.get(`/sync/notion/database-schema?database_id=${dbId}`);
-                                  setNotionSchema(res.properties || []);
-                                } catch (err) {
-                                  console.warn('Could not fetch schema', err);
-                                  setNotionSchema(null);
-                                } finally {
-                                  setNotionSchemaLoading(false);
-                                }
-                              } else {
-                                setNotionSchema(null);
-                              }
-                            }}
-                          >
-                            <option value="">— Pick a database —</option>
-                            {availableDatabases.map(db => (
-                              <option key={db.id} value={db.id}>{db.title}</option>
-                            ))}
-                          </select>
-                        ) : d.notion_database_id ? (
-                          <input className="d-input" value={d.notion_database_id} readOnly style={{ background: 'var(--bg-dim)', cursor: 'not-allowed' }} />
-                        ) : (
-                          <p style={{ fontSize: 13, color: 'var(--text-warning)' }}>No databases found. Make sure you've shared them with your integration in Notion.</p>
-                        )}
-                      </label>
-
-                      {notionSchemaLoading ? (
-                        <div style={{ padding: '16px 0', color: 'var(--text2)', fontSize: 13 }}>Loading column schema...</div>
-                      ) : notionSchema && notionSchema.length > 0 ? (
-                        <>
-                          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                            <span className="d-field-label" style={{ display: 'block', marginBottom: 8 }}>Property Mapping</span>
-                            <p className="d-field-help" style={{ margin: '0 0 12px 0' }}>Map your Notion column names to dopaPal task fields.</p>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                              <SchemaSelect
-                                label="Title column"
-                                schema={notionSchema}
-                                types={['title']}
-                                value={(d.property_mapping || {}).title || ''}
-                                onChange={v => set('property_mapping.title', v)}
-                                placeholder="Pick title column"
-                              />
-                              <SchemaSelect
-                                label="Deadline column"
-                                schema={notionSchema}
-                                types={['date']}
-                                value={(d.property_mapping || {}).deadline || ''}
-                                onChange={v => set('property_mapping.deadline', v)}
-                                placeholder="Pick date column"
-                              />
-                              <SchemaSelect
-                                label="Interest tag column"
-                                schema={notionSchema}
-                                types={['select', 'status', 'multi_select']}
-                                value={(d.property_mapping || {}).interest_tag || ''}
-                                onChange={v => set('property_mapping.interest_tag', v)}
-                                placeholder="Pick tag column"
-                                help="Select, status, or multi-select property."
-                              />
-                            </div>
-                          </div>
-
-                          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                            <span className="d-field-label" style={{ display: 'block', marginBottom: 8 }}>Completion Status</span>
-                            <p className="d-field-help" style={{ margin: '0 0 12px 0' }}>Select which column tracks completion and what value means "done".</p>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                              <SchemaSelect
-                                label="Status column"
-                                schema={notionSchema}
-                                types={['status', 'select', 'checkbox']}
-                                value={d.status_field || ''}
-                                onChange={v => set('status_field', v)}
-                                placeholder="Pick status column (optional)"
-                                help="If set, only this column is checked for completion."
-                              />
-                              {(() => {
-                                const statusFieldSchema = d.status_field
-                                  ? notionSchema.find(p => p.name === d.status_field)
-                                  : null;
-                                const statusType = statusFieldSchema?.type;
-                                const options = statusFieldSchema?.options;
-                                if (statusType === 'checkbox') {
-                                  return (
-                                    <p style={{ fontSize: 13, color: 'var(--text2)', margin: 0 }}>
-                                      When this checkbox is checked, the page is marked done.
-                                    </p>
-                                  );
-                                }
-                                return (
-                                  <>
-                                    <label className="d-toggle-row" style={{ marginBottom: 0 }}>
-                                      <span style={{ fontSize: 13 }}>Skip completed pages</span>
-                                      <input type="checkbox" checked={(d.sync_filters || {}).ignore_completed !== false} onChange={e => set('sync_filters.ignore_completed', e.target.checked)} />
-                                    </label>
-                                    <label style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                                      <span style={{ fontSize: 13, color: 'var(--text2)' }}>Completed value</span>
-                                      {options && options.length > 0 ? (
-                                        <select
-                                          className="d-input"
-                                          style={{ appearance: 'auto', width: 200 }}
-                                          value={(d.sync_filters || {}).completed_status_value || 'Done'}
-                                          onChange={e => set('sync_filters.completed_status_value', e.target.value)}
-                                        >
-                                          <option value="">— Pick value —</option>
-                                          {options.map(opt => (
-                                            <option key={opt.name} value={opt.name}>{opt.name}</option>
-                                          ))}
-                                        </select>
-                                      ) : (
-                                        <input className="d-input" value={(d.sync_filters || {}).completed_status_value || 'Done'} onChange={e => set('sync_filters.completed_status_value', e.target.value)} placeholder="Done" style={{ width: 180 }} />
-                                      )}
-                                    </label>
-                                  </>
-                                );
-                              })()}
-                            </div>
-                          </div>
-                        </>
-                      ) : d.notion_database_id && !notionSchemaLoading ? (
-                        <p style={{ fontSize: 13, color: 'var(--text-warning)', padding: '8px 0' }}>Could not load database schema. Make sure the integration has access to the database.</p>
-                      ) : null}
+              {addTaskView === 'options' && (
+                <div className="d-modal-options">
+                  <button className="d-modal-btn" onClick={() => setAddTaskView('ai')}>
+                    <div className="d-modal-icon" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}><IconSparkle /></div>
+                    <div className="d-modal-text">
+                      <strong>{t('bubble.aiSmartInput')}</strong>
+                      <span>{t('bubble.aiSmartInputDesc')}</span>
                     </div>
-                  );
-                })()
-              ) : syncSettingsModal === 'jira' ? (
-                (() => {
-                  const set = (path, val) => {
-                    setSyncSettingsDraft(prev => {
-                      const copy = JSON.parse(JSON.stringify(prev));
-                      const parts = path.split('.');
-                      let cur = copy;
-                      for (let i = 0; i < parts.length - 1; i++) {
-                        if (!cur[parts[i]]) cur[parts[i]] = {};
-                        cur = cur[parts[i]];
-                      }
-                      cur[parts[parts.length - 1]] = val;
-                      return copy;
-                    });
-                  };
-                  const d = syncSettingsDraft;
-                  const parseChips = (str) => (str || '').split(/[,;]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
-                  const chipsToStr = (arr) => arr.join(', ');
-                  return (
-                    <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <span className="d-field-label">Jira Instance URL</span>
-                        <input className="d-input" value={d.jira_instance_url || ''} onChange={e => set('jira_instance_url', e.target.value)} placeholder="https://mycompany.atlassian.net" />
-                      </label>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <span className="d-field-label">Email</span>
-                        <input className="d-input" value={d.jira_email || ''} onChange={e => set('jira_email', e.target.value)} placeholder="user@example.com" />
-                      </label>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <span className="d-field-label">Project Key</span>
-                        <p className="d-field-help" style={{ margin: 0 }}>Optional — only sync issues from this project (e.g. PROJ).</p>
-                        <input className="d-input" value={d.jira_project_key || ''} onChange={e => set('jira_project_key', e.target.value.toUpperCase())} placeholder="PROJ" style={{ width: 120 }} />
-                      </label>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <span className="d-field-label">JQL Filter</span>
-                        <p className="d-field-help" style={{ margin: 0 }}>Custom JQL query. Default: <code>assignee = currentUser() AND resolution = Unresolved</code>.</p>
-                        <input className="d-input" value={d.jql_filter || ''} onChange={e => set('jql_filter', e.target.value)} placeholder="assignee = currentUser() AND resolution = Unresolved" />
-                      </label>
-
-                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                        <span className="d-field-label" style={{ display: 'block', marginBottom: 8 }}>Property Mapping</span>
-                        <p className="d-field-help" style={{ margin: '0 0 12px 0' }}>Map Jira field names to dopaPal task fields.</p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                          {['summary', 'duedate', 'priority', 'status', 'labels'].map(field => (
-                            <label key={field} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                              <span style={{ fontSize: 13, color: 'var(--text2)', textTransform: 'capitalize' }}>{field} field</span>
-                              <input className="d-input" value={(d.property_mapping || {})[field] || ''} onChange={e => set(`property_mapping.${field}`, e.target.value)} placeholder={field} style={{ width: 200 }} />
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                        <span className="d-field-label" style={{ display: 'block', marginBottom: 8 }}>Sync Filters</span>
-                        <p className="d-field-help" style={{ margin: '0 0 12px 0' }}>Control which issues are synced based on resolution and status.</p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                          <label className="d-toggle-row" style={{ marginBottom: 0 }}>
-                            <span style={{ fontSize: 13 }}>Skip resolved issues</span>
-                            <input type="checkbox" checked={(d.sync_filters || {}).resolved_filter !== false} onChange={e => set('sync_filters.resolved_filter', e.target.checked)} />
-                          </label>
-                          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            <span className="d-field-label">Exclude resolutions</span>
-                            <ChipInput values={parseChips((d.sync_filters || {}).exclude_resolution)} onChange={vals => set('sync_filters.exclude_resolution', chipsToStr(vals))} placeholder="e.g. Won't Do, Duplicate" />
-                          </label>
-                          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            <span className="d-field-label">Include statuses</span>
-                            <ChipInput values={parseChips((d.sync_filters || {}).include_statuses)} onChange={vals => set('sync_filters.include_statuses', chipsToStr(vals))} placeholder="e.g. In Progress, To Do" />
-                          </label>
-                          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            <span className="d-field-label">Exclude statuses</span>
-                            <ChipInput values={parseChips((d.sync_filters || {}).exclude_statuses)} onChange={vals => set('sync_filters.exclude_statuses', chipsToStr(vals))} placeholder="e.g. Done, Cancelled" />
-                          </label>
-                        </div>
-                      </div>
+                  </button>
+                  <button className="d-modal-btn" onClick={isRecording ? stopRecording : startRecording}>
+                    <div className="d-modal-icon" style={{ background: isRecording ? 'rgba(var(--high-rgb),.15)' : 'rgba(56,189,248,.15)', color: isRecording ? 'var(--high)' : '#38bdf8' }}>
+                      {isRecording ? <div className="b-dot" style={{ background: 'var(--high)', width: 12, height: 12, borderRadius: '50%' }} /> : <IconMic />}
                     </div>
-                  );
-                })()
-              ) : (
-                (() => {
-                  const set = (path, val) => {
-                    setSyncSettingsDraft(prev => {
-                      const copy = JSON.parse(JSON.stringify(prev));
-                      const parts = path.split('.');
-                      let cur = copy;
-                      for (let i = 0; i < parts.length - 1; i++) {
-                        if (!cur[parts[i]]) cur[parts[i]] = {};
-                        cur = cur[parts[i]];
-                      }
-                      cur[parts[parts.length - 1]] = val;
-                      return copy;
-                    });
-                  };
-                  const d = syncSettingsDraft;
-                  const parseChips = (str) => (str || '').split(/[,;]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
-                  const chipsToStr = (arr) => arr.join(', ');
+                    <div className="d-modal-text">
+                      <strong>{isRecording ? "Recording... Click to stop" : t('bubble.voiceMemo')}</strong>
+                      <span>{t('bubble.voiceMemoDesc')}</span>
+                    </div>
+                  </button>
+                  <button className="d-modal-btn" onClick={() => setAddTaskView('manual')}>
+                    <div className="d-modal-icon" style={{ background: 'rgba(249,115,22,.15)', color: '#f97316' }}><IconKeyboard /></div>
+                    <div className="d-modal-text">
+                      <strong>{t('bubble.manualEntry')}</strong>
+                      <span>{t('bubble.manualEntryDesc')}</span>
+                    </div>
+                  </button>
+                </div>
+              )}
 
-                  return ['tasks', 'calendar', 'gmail'].map((app, idx) => {
-                    const appDraft = d[app] || {};
-                    const appIconsMap = { tasks: <TaskListLogo size={16} />, calendar: <CalendarLogo size={16} />, gmail: <GmailLogo size={16} /> };
-                    return (
-                      <div key={app} style={{ borderBottom: idx < 2 ? '1px solid var(--border)' : 'none', padding: '20px 24px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                          <span style={{ display: 'inline-flex' }}>{appIconsMap[app]}</span>
-                          <span style={{ fontWeight: 600, fontSize: 14 }}>{app.charAt(0).toUpperCase() + app.slice(1)}</span>
-                          <label className="d-toggle-row" style={{ marginLeft: 'auto', marginBottom: 0, gap: 8 }}>
-                            <span style={{ fontSize: 12, color: 'var(--text2)' }}>{appDraft.enabled !== false ? 'On' : 'Off'}</span>
-                            <input type="checkbox" checked={appDraft.enabled !== false} onChange={e => set(`${app}.enabled`, e.target.checked)} />
-                          </label>
-                        </div>
+              {addTaskView === 'ai' && (
+                <div className="d-modal-form">
+                  <textarea className="d-input" style={{ minHeight: '120px', resize: 'vertical' }} placeholder="Type or paste your unstructured task here..." value={aiText} onChange={e => setAiText(e.target.value)} autoFocus />
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                    <button className="d-btn d-btn--secondary" onClick={() => setAddTaskView('options')} style={{ flex: 1 }}>Back</button>
+                    <button className="d-btn d-btn--primary" onClick={() => submitNewTask('ai')} disabled={isSubmittingTask || !aiText.trim()} style={{ flex: 2 }}>
+                      {isSubmittingTask ? 'Processing...' : 'Extract & Add Task'}
+                    </button>
+                  </div>
+                </div>
+              )}
 
-                        {app === 'tasks' && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            <label className="d-toggle-row" style={{ marginBottom: 0 }}>
-                              <span style={{ fontSize: 13 }}>Include completed tasks</span>
-                              <input type="checkbox" checked={!!appDraft.include_completed} onChange={e => set('tasks.include_completed', e.target.checked)} />
-                            </label>
-                            <label className="d-toggle-row" style={{ marginBottom: 0 }}>
-                              <span style={{ fontSize: 13 }}>Include tasks without a due date</span>
-                              <input type="checkbox" checked={appDraft.include_no_due_date !== false} onChange={e => set('tasks.include_no_due_date', e.target.checked)} />
-                            </label>
-                            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <span className="d-field-label">Task category tags</span>
-                              <p className="d-field-help" style={{ margin: 0 }}>Tasks from Google will be tagged with these labels.</p>
-                              <ChipInput values={parseChips(appDraft.interest_tag)} onChange={vals => set('tasks.interest_tag', chipsToStr(vals))} placeholder="Type tag and press Enter" />
-                            </label>
-                          </div>
-                        )}
-
-                        {app === 'calendar' && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <span className="d-field-label">Include keywords</span>
-                              <p className="d-field-help" style={{ margin: 0 }}>Events with these words will be imported.</p>
-                              <ChipInput values={parseChips(appDraft.include_keywords)} onChange={vals => set('calendar.include_keywords', chipsToStr(vals))} placeholder="Type and press Enter" />
-                            </label>
-                            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <span className="d-field-label">Exclude keywords</span>
-                              <p className="d-field-help" style={{ margin: 0 }}>Events with these words in the title will be skipped.</p>
-                              <ChipInput values={parseChips(appDraft.exclude_keywords)} onChange={vals => set('calendar.exclude_keywords', chipsToStr(vals))} placeholder="Type and press Enter" />
-                            </label>
-                            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <span className="d-field-label">Minimum duration</span>
-                              <p className="d-field-help" style={{ margin: 0 }}>Events shorter than this (minutes) are treated as meetings.</p>
-                              <input className="d-input" type="number" min={0} value={appDraft.min_duration_minutes ?? 30} onChange={e => set('calendar.min_duration_minutes', parseInt(e.target.value) || 0)} style={{ width: 100 }} />
-                            </label>
-                            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <span className="d-field-label">Event types to include</span>
-                              <p className="d-field-help" style={{ margin: 0 }}>Allowed: default, focusTime, outOfOffice, workingLocation.</p>
-                              <ChipInput values={parseChips(appDraft.include_event_types || 'default')} onChange={vals => set('calendar.include_event_types', chipsToStr(vals) || 'default')} placeholder="Type and press Enter" />
-                            </label>
-                            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <span className="d-field-label">Event category tags</span>
-                              <p className="d-field-help" style={{ margin: 0 }}>Events from Google Calendar will be tagged with these labels.</p>
-                              <ChipInput values={parseChips(appDraft.interest_tag)} onChange={vals => set('calendar.interest_tag', chipsToStr(vals))} placeholder="Type tag and press Enter" />
-                            </label>
-                          </div>
-                        )}
-
-                        {app === 'gmail' && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <span className="d-field-label">Include keywords</span>
-                              <p className="d-field-help" style={{ margin: 0 }}>Emails with these words in the subject or body will be imported.</p>
-                              <ChipInput values={parseChips(appDraft.include_keywords)} onChange={vals => set('gmail.include_keywords', chipsToStr(vals))} placeholder="Type and press Enter" />
-                            </label>
-                            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <span className="d-field-label">Include senders</span>
-                              <p className="d-field-help" style={{ margin: 0 }}>Only import emails from these addresses.</p>
-                              <ChipInput values={parseChips(appDraft.include_senders)} onChange={vals => set('gmail.include_senders', chipsToStr(vals))} placeholder="Type and press Enter" />
-                            </label>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  });
-                })()
+              {addTaskView === 'manual' && (
+                <div className="d-modal-form">
+                  <input className="d-input" placeholder={t('bubble.taskPlaceholder')} value={taskData.title} onChange={e => setTaskData({ ...taskData, title: e.target.value })} autoFocus />
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      className="d-input"
+                      placeholder={t('bubble.durationPlaceholder')}
+                      value={taskData.duration}
+                      onChange={e => setTaskData({ ...taskData, duration: e.target.value })}
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      onClick={() => setTaskData({ ...taskData, duration: '30m' })}
+                      style={{
+                        padding: '8px 16px',
+                        background: 'var(--accent)',
+                        color: 'var(--text-white)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        alignSelf: 'stretch'
+                      }}
+                    >
+                      30m
+                    </button>
+                    <button
+                      onClick={() => setTaskData({ ...taskData, duration: '1h' })}
+                      style={{
+                        padding: '8px 16px',
+                        background: 'var(--accent)',
+                        color: 'var(--text-white)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        alignSelf: 'stretch'
+                      }}
+                    >
+                      1h
+                    </button>
+                    <button
+                      onClick={() => setTaskData({ ...taskData, duration: '2h' })}
+                      style={{
+                        padding: '8px 16px',
+                        background: 'var(--accent)',
+                        color: 'var(--text-white)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        alignSelf: 'stretch'
+                      }}
+                    >
+                      2h
+                    </button>
+                  </div>
+                  <input className="d-input" placeholder={t('bubble.dueDatePlaceholder')} value={taskData.due} onChange={e => setTaskData({ ...taskData, due: e.target.value })} />
+                  <textarea className="d-input" placeholder={t('bubble.notesPlaceholder')} value={taskData.notes} onChange={e => setTaskData({ ...taskData, notes: e.target.value })} />
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                    <button className="d-btn d-btn--secondary" onClick={() => setAddTaskView('options')} style={{ flex: 1 }}>Back</button>
+                    <button className="d-btn d-btn--primary" onClick={() => submitNewTask('manual')} disabled={isSubmittingTask || !taskData.title.trim()} style={{ flex: 2 }}>
+                      {isSubmittingTask ? 'Saving...' : t('bubble.createTask')}
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
-            <div className="d-modal-footer">
-              <button className="d-btn" onClick={closeSyncSettings}>Cancel</button>
-              <button className="d-btn d-btn--primary" onClick={saveSyncSettings} disabled={syncSettingsSaving} style={{ background: 'var(--accent)', color: 'var(--text-white)', border: 'none' }}>
-                {syncSettingsSaving ? 'Saving...' : 'Save'}
-              </button>
+          </div>
+        )
+      }
+
+      {/* ── Sync settings modal ── */}
+      {
+        (syncSettingsModal || syncSettingsClosing) && (
+          <div className={`d-modal-overlay${syncSettingsClosing ? ' closing' : ''}`} onClick={closeSyncSettings}>
+            <div className={`d-modal-content${syncSettingsClosing ? ' closing' : ''}`} onClick={e => e.stopPropagation()} style={{ maxWidth: 540, maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
+              <div className="d-modal-header">
+                <span style={{ fontWeight: 600, fontSize: 16 }}>Google Sync Settings</span>
+                <button className="d-modal-close" onClick={closeSyncSettings}>×</button>
+              </div>
+              <div className="d-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 0, padding: 0, overflowY: 'auto', flex: 1 }}>
+                {syncSettingsLoading ? (
+                  <div style={{ padding: '40px 24px', color: 'var(--text2)', textAlign: 'center' }}>Loading...</div>
+                ) : (
+                  (() => {
+                    const set = (path, val) => {
+                      setSyncSettingsDraft(prev => {
+                        const copy = JSON.parse(JSON.stringify(prev));
+                        const parts = path.split('.');
+                        let cur = copy;
+                        for (let i = 0; i < parts.length - 1; i++) {
+                          if (!cur[parts[i]]) cur[parts[i]] = {};
+                          cur = cur[parts[i]];
+                        }
+                        cur[parts[parts.length - 1]] = val;
+                        return copy;
+                      });
+                    };
+                    const d = syncSettingsDraft;
+                    const parseChips = (str) => (str || '').split(/[,;]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
+                    const chipsToStr = (arr) => arr.join(', ');
+
+                    return ['tasks', 'calendar', 'gmail'].map((app, idx) => {
+                      const appDraft = d[app] || {};
+                      const appIconsMap = { tasks: <TaskListLogo size={16} />, calendar: <CalendarLogo size={16} />, gmail: <GmailLogo size={16} /> };
+                      return (
+                        <div key={app} style={{ borderBottom: idx < 2 ? '1px solid var(--border)' : 'none', padding: '20px 24px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                            <span style={{ display: 'inline-flex' }}>{appIconsMap[app]}</span>
+                            <span style={{ fontWeight: 600, fontSize: 14 }}>{app.charAt(0).toUpperCase() + app.slice(1)}</span>
+                            <label className="d-toggle-row" style={{ marginLeft: 'auto', marginBottom: 0, gap: 8 }}>
+                              <span style={{ fontSize: 12, color: 'var(--text2)' }}>{appDraft.enabled !== false ? 'On' : 'Off'}</span>
+                              <input type="checkbox" checked={appDraft.enabled !== false} onChange={e => set(`${app}.enabled`, e.target.checked)} />
+                            </label>
+                          </div>
+
+                          {app === 'tasks' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                              <label className="d-toggle-row" style={{ marginBottom: 0 }}>
+                                <span style={{ fontSize: 13 }}>Include completed tasks</span>
+                                <input type="checkbox" checked={!!appDraft.include_completed} onChange={e => set('tasks.include_completed', e.target.checked)} />
+                              </label>
+                              <label className="d-toggle-row" style={{ marginBottom: 0 }}>
+                                <span style={{ fontSize: 13 }}>Include tasks without a due date</span>
+                                <input type="checkbox" checked={appDraft.include_no_due_date !== false} onChange={e => set('tasks.include_no_due_date', e.target.checked)} />
+                              </label>
+                              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                <span className="d-field-label">Task category tags</span>
+                                <p className="d-field-help" style={{ margin: 0 }}>Tasks from Google will be tagged with these labels.</p>
+                                <ChipInput values={parseChips(appDraft.interest_tag)} onChange={vals => set('tasks.interest_tag', chipsToStr(vals))} placeholder="Type tag and press Enter" />
+                              </label>
+                            </div>
+                          )}
+
+                          {app === 'calendar' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                <span className="d-field-label">Include keywords</span>
+                                <p className="d-field-help" style={{ margin: 0 }}>Events with these words will be imported.</p>
+                                <ChipInput values={parseChips(appDraft.include_keywords)} onChange={vals => set('calendar.include_keywords', chipsToStr(vals))} placeholder="Type and press Enter" />
+                              </label>
+                              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                <span className="d-field-label">Exclude keywords</span>
+                                <p className="d-field-help" style={{ margin: 0 }}>Events with these words in the title will be skipped.</p>
+                                <ChipInput values={parseChips(appDraft.exclude_keywords)} onChange={vals => set('calendar.exclude_keywords', chipsToStr(vals))} placeholder="Type and press Enter" />
+                              </label>
+                              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                <span className="d-field-label">Minimum duration</span>
+                                <p className="d-field-help" style={{ margin: 0 }}>Events shorter than this (minutes) are treated as meetings.</p>
+                                <input className="d-input" type="number" min={0} value={appDraft.min_duration_minutes ?? 30} onChange={e => set('calendar.min_duration_minutes', parseInt(e.target.value) || 0)} style={{ width: 100 }} />
+                              </label>
+                              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                <span className="d-field-label">Event types to include</span>
+                                <p className="d-field-help" style={{ margin: 0 }}>Allowed: default, focusTime, outOfOffice, workingLocation.</p>
+                                <ChipInput values={parseChips(appDraft.include_event_types || 'default')} onChange={vals => set('calendar.include_event_types', chipsToStr(vals) || 'default')} placeholder="Type and press Enter" />
+                              </label>
+                              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                <span className="d-field-label">Event category tags</span>
+                                <p className="d-field-help" style={{ margin: 0 }}>Events from Google Calendar will be tagged with these labels.</p>
+                                <ChipInput values={parseChips(appDraft.interest_tag)} onChange={vals => set('calendar.interest_tag', chipsToStr(vals))} placeholder="Type tag and press Enter" />
+                              </label>
+                            </div>
+                          )}
+
+                          {app === 'gmail' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                <span className="d-field-label">Include keywords</span>
+                                <p className="d-field-help" style={{ margin: 0 }}>Emails with these words in the subject or body will be imported.</p>
+                                <ChipInput values={parseChips(appDraft.include_keywords)} onChange={vals => set('gmail.include_keywords', chipsToStr(vals))} placeholder="Type and press Enter" />
+                              </label>
+                              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                <span className="d-field-label">Include senders</span>
+                                <p className="d-field-help" style={{ margin: 0 }}>Only import emails from these addresses.</p>
+                                <ChipInput values={parseChips(appDraft.include_senders)} onChange={vals => set('gmail.include_senders', chipsToStr(vals))} placeholder="Type and press Enter" />
+                              </label>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    });
+                  })()
+                )}
+              </div>
+              <div className="d-modal-footer">
+                <button className="d-btn" onClick={closeSyncSettings}>Cancel</button>
+                <button className="d-btn d-btn--primary" onClick={saveSyncSettings} disabled={syncSettingsSaving} style={{ background: 'var(--accent)', color: 'var(--text-white)', border: 'none' }}>
+                  {syncSettingsSaving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
-    </div>
+    </div >
   );
 }

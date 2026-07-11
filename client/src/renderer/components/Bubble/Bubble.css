@@ -3,34 +3,67 @@
 
 /* ── Theme CSS variable defaults (overridden by active theme) ── */
 :root {
-  --accent       : #a78bfa;
-  --accent-rgb   : 167,139,250;
-  --accent-glow  : rgba(167,139,250,.35);
-  --accent-dim   : rgba(167,139,250,.12);
-  --bg           : #080810;
-  --bg-rgb       : 8,8,16;
-  --surface      : rgba(16,15,30,.6);
-  --surface-rgb  : 16,15,30;
-  --surface2     : rgba(24,22,42,.6);
-  --surface-alt  : #12102a;
-  --surface-alt2 : #1c1640;
-  --border       : rgba(167,139,250,.2);
-  --text         : #f0eeff;
-  --text2        : #9b96c9;
-  --text3        : #5a567a;
-  --text3-rgb    : 90,86,122;
-  --high         : #f87171;
-  --high-rgb     : 248,113,113;
-  --med          : #fbbf24;
-  --low          : #34d399;
-  --low-rgb      : 52,211,153;
-  --error        : #ef4444;
-  --error-rgb    : 239,68,68;
-  --overlay      : rgba(0,0,0,.55);
-  --blue         : #93c5fd;
-  --blue-rgb     : 96,165,250;
-  --glass-rgb    : 255,255,255;
-  --shadow-rgb   : 0,0,0;
+  /* ── UI chrome accent ──────────────────────────────────────────────── */
+  --accent: #a78bfa;
+  --accent-rgb: 167, 139, 250;
+  --accent-glow: rgba(167, 139, 250, .28);
+  --accent-dim: rgba(167, 139, 250, .10);
+
+  /* ── Surfaces ──────────────────────────────────────────────────────── */
+  --bg: #0d0d14;
+  --bg-rgb: 13, 13, 20;
+  --bg-canvas: #0d0d14;
+  --bg-card: #1a1a27;
+  --bg-card-2: #222233;
+  --surface: rgba(26, 26, 39, .92);
+  --surface-rgb: 26, 26, 39;
+  --surface2: rgba(34, 34, 51, .92);
+  --surface-alt: #1a1a27;
+  --surface-alt2: #222233;
+
+  /* ── Borders & shadows ─────────────────────────────────────────────── */
+  --border: rgba(255, 255, 255, .07);
+  --shadow-ink: 0, 0, 0;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, .06), 0 8px 24px -8px rgba(0, 0, 0, .12);
+
+  /* ── Ink (text) ────────────────────────────────────────────────────── */
+  --text: #f0eeff;
+  --text2: #9b96c9;
+  --text3: #5a567a;
+  --text3-rgb: 90, 86, 122;
+  --ink-primary: #f0eeff;
+  --ink-muted: #9b96c9;
+  --ink-faint: #5a567a;
+
+  /* ── Semantic ──────────────────────────────────────────────────────── */
+  --high: #F9AB00;
+  --high-rgb: 249, 171, 0;
+  --med: #1E8E3E;
+  --low: #4285F4;
+  --low-rgb: 66, 133, 244;
+  --error: #E8703A;
+  --error-rgb: 232, 112, 58;
+
+  /* ── Fixed five-color category palette (spec 3.3) ──────────────────── */
+  --cat-blue: #4285F4;
+  --cat-blue-tint: #E8F0FE;
+  --cat-green: #1E8E3E;
+  --cat-green-tint: #E6F4EA;
+  --cat-amber: #F9AB00;
+  --cat-amber-tint: #FEF7E0;
+  --cat-coral: #E8703A;
+  --cat-coral-tint: #FCE8E0;
+  --cat-purple: #A142F4;
+  --cat-purple-tint: #F3E8FD;
+
+  /* ── Misc ──────────────────────────────────────────────────────────── */
+  --overlay: rgba(0, 0, 0, .55);
+  --glass-rgb: 255, 255, 255;
+  --shadow-rgb: 0, 0, 0;
+
+  /* ── Entrance easing (spec 3.5, identical on every card) ───────────── */
+  --ease-entrance: cubic-bezier(.22, 1, .36, 1);
+  --dur-entrance: 380ms;
 }
 
 /* ── Reset ─────────────────────────────────────────────── */
@@ -124,6 +157,75 @@ body {
   pointer-events: none;
 }
 
+.b-state-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px transparent;
+  pointer-events: none;
+}
+
+.b-state-dot--low {
+  background: var(--cat-coral);
+  box-shadow: 0 0 0 4px rgba(232, 112, 58, .14);
+  animation: state-breathe-low 6s ease-in-out infinite;
+}
+
+.b-state-dot--mid {
+  background: var(--cat-blue);
+  box-shadow: 0 0 0 4px rgba(66, 133, 244, .12);
+  animation: state-breathe-mid 4s ease-in-out infinite;
+}
+
+.b-state-dot--high {
+  background: var(--cat-amber);
+  box-shadow: 0 0 0 4px rgba(249, 171, 0, .16);
+  animation: state-breathe-high 2.6s ease-in-out infinite;
+}
+
+@keyframes state-breathe-low {
+
+  0%,
+  100% {
+    transform: scale(.92);
+    opacity: .7;
+  }
+
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+@keyframes state-breathe-mid {
+
+  0%,
+  100% {
+    transform: scale(.95);
+    opacity: .75;
+  }
+
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+@keyframes state-breathe-high {
+
+  0%,
+  100% {
+    transform: scale(.98);
+    opacity: .82;
+  }
+
+  50% {
+    transform: scale(1.28);
+    opacity: 1;
+  }
+}
+
 .b-ring {
   position: absolute;
   inset: -8px;
@@ -178,6 +280,13 @@ body {
   flex-direction: column;
   gap: 10px;
   padding: 16px 16px 14px;
+}
+
+.b-panel--mood,
+.b-panel--task,
+.b-panel--reward,
+.b-panel--empty {
+  gap: 12px;
 }
 
 /* Vertical side panels */
@@ -327,9 +436,170 @@ body {
 }
 
 .b-close:hover {
-  background: var(--error);
-  border-color: var(--error);
+  background: rgba(var(--high-rgb), .16);
+  border-color: rgba(var(--high-rgb), .38);
   color: var(--text);
+}
+
+.b-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(var(--text3-rgb), .85);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+}
+
+.b-category-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.b-category-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.b-category-chip--blue {
+  background: var(--cat-blue-tint);
+  color: var(--cat-blue);
+}
+
+.b-category-chip--blue .b-category-chip-dot {
+  background: var(--cat-blue);
+}
+
+.b-category-chip--amber {
+  background: var(--cat-amber-tint);
+  color: var(--cat-amber);
+}
+
+.b-category-chip--amber .b-category-chip-dot {
+  background: var(--cat-amber);
+}
+
+.b-category-chip--coral {
+  background: var(--cat-coral-tint);
+  color: var(--cat-coral);
+}
+
+.b-category-chip--coral .b-category-chip-dot {
+  background: var(--cat-coral);
+}
+
+.b-task-sentence {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+.b-task-meta {
+  font-size: 13px;
+  color: rgba(var(--text3-rgb), .82);
+}
+
+.b-task-complete {
+  width: 100%;
+  border: none;
+  border-radius: 13px;
+  padding: 11px 14px;
+  background: var(--cat-blue);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.b-bonus-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--cat-purple-tint);
+  color: var(--cat-purple);
+}
+
+.b-bonus-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+}
+
+.b-intake-row,
+.b-card-footer {
+  display: flex;
+  gap: 8px;
+}
+
+.b-mini-action,
+.b-mini-toggle,
+.b-text-link {
+  border: 1px solid rgba(var(--accent-rgb), .16);
+  background: rgba(var(--glass-rgb), .06);
+  color: var(--text2);
+  border-radius: 999px;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.b-mini-toggle--audio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+}
+
+.b-mini-toggle--audio svg {
+  width: 14px;
+  height: 14px;
+  color: var(--accent);
+}
+
+.b-mini-toggle--audio span {
+  line-height: 1;
+}
+
+.b-mini-toggle--audio.muted {
+  opacity: 0.76;
+}
+
+.b-text-link {
+  align-self: center;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+}
+
+.b-reward-glow {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(30, 142, 62, .12);
+  color: var(--cat-green);
+  font-size: 26px;
+  font-weight: 800;
+  align-self: center;
+}
+
+.b-orb .b-state-dot {
+  top: 29px;
+  left: 29px;
 }
 
 .b-back {
@@ -581,25 +851,25 @@ body {
 }
 
 .b-voice-btn--active {
-  background: rgba(var(--error-rgb), .12);
-  border-color: var(--error);
-  color: var(--error);
+  background: rgba(var(--high-rgb), .12);
+  border-color: var(--high);
+  color: var(--high);
   animation: pulse-border 1s ease-in-out infinite;
 }
 
 .b-voice-btn--active svg {
-  color: var(--error);
+  color: var(--high);
 }
 
 @keyframes pulse-border {
 
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(var(--error-rgb), .4);
+    box-shadow: 0 0 0 0 rgba(var(--high-rgb), .35);
   }
 
   50% {
-    box-shadow: 0 0 0 8px rgba(var(--error-rgb), 0);
+    box-shadow: 0 0 0 8px rgba(var(--high-rgb), 0);
   }
 }
 
@@ -1296,4 +1566,191 @@ input[type="date"].b-input::-webkit-calendar-picker-indicator {
 [dir="rtl"] .b-back {
   right: -2px;
   left: auto;
+}
+
+
+/* ===================================================================
+   === Material Calmed Down === Bubble additions
+   =================================================================== */
+
+/* ── Entrance animation (same as Dashboard — one product feel) ────────── */
+@keyframes mat-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.mat-enter {
+  animation: mat-enter var(--dur-entrance, 380ms) var(--ease-entrance, cubic-bezier(.22, 1, .36, 1)) both;
+}
+
+/* ── Orb breathing glow — THE ONLY continuous loop in the system ──────── */
+@keyframes mat-orb-breathe {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--accent-rgb), .00), 0 4px 16px rgba(0, 0, 0, .3);
+  }
+
+  50% {
+    box-shadow: 0 0 0 8px rgba(var(--accent-rgb), .22), 0 4px 16px rgba(0, 0, 0, .3);
+  }
+}
+
+.mat-breathe {
+  animation: mat-orb-breathe 3.2s ease-in-out infinite;
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes mat-enter {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes mat-orb-breathe {
+
+    0%,
+    100% {
+      box-shadow: 0 0 0 4px rgba(var(--accent-rgb), .06), 0 4px 16px rgba(0, 0, 0, .3);
+    }
+
+    50% {
+      box-shadow: 0 0 0 4px rgba(var(--accent-rgb), .16), 0 4px 16px rgba(0, 0, 0, .3);
+    }
+  }
+
+  .b-menu,
+  .b-orb,
+  .b-card {
+    transition-duration: 0ms !important;
+  }
+
+  .b-state-dot--low,
+  .b-state-dot--mid,
+  .b-state-dot--high {
+    animation: none !important;
+  }
+}
+
+/* ── Category utility classes ─────────────────────────────────────────── */
+.cat--blue {
+  color: var(--cat-blue);
+}
+
+.cat--blue-bg {
+  background: var(--cat-blue-tint);
+  color: var(--cat-blue);
+}
+
+.cat--green {
+  color: var(--cat-green);
+}
+
+.cat--green-bg {
+  background: var(--cat-green-tint);
+  color: var(--cat-green);
+}
+
+.cat--amber {
+  color: var(--cat-amber);
+}
+
+.cat--amber-bg {
+  background: var(--cat-amber-tint);
+  color: var(--cat-amber);
+}
+
+.cat--coral {
+  color: var(--cat-coral);
+}
+
+.cat--coral-bg {
+  background: var(--cat-coral-tint);
+  color: var(--cat-coral);
+}
+
+.cat--purple {
+  color: var(--cat-purple);
+}
+
+.cat--purple-bg {
+  background: var(--cat-purple-tint);
+  color: var(--cat-purple);
+}
+
+.cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  white-space: nowrap;
+}
+
+.cat-chip.blue {
+  background: var(--cat-blue-tint);
+  color: var(--cat-blue);
+}
+
+.cat-chip.green {
+  background: var(--cat-green-tint);
+  color: var(--cat-green);
+}
+
+.cat-chip.amber {
+  background: var(--cat-amber-tint);
+  color: var(--cat-amber);
+}
+
+.cat-chip.coral {
+  background: var(--cat-coral-tint);
+  color: var(--cat-coral);
+}
+
+.cat-chip.purple {
+  background: var(--cat-purple-tint);
+  color: var(--cat-purple);
+}
+
+/* ── Light theme: Bubble card surface ─────────────────────────────────── */
+[data-theme="calmed-light"] .b-menu {
+  background: var(--bg-card);
+  box-shadow: 0 1px 2px rgba(31, 27, 22, .06), 0 8px 24px -8px rgba(31, 27, 22, .12);
+  border-color: rgba(31, 27, 22, .08);
+}
+
+[data-theme="calmed-light"] .b-card,
+[data-theme="calmed-light"] .b-play-queue-row,
+[data-theme="calmed-light"] .b-play-summary-card {
+  background: var(--bg-card-2);
+  border-color: rgba(31, 27, 22, .08);
+}
+
+[data-theme="calmed-light"] .b-submit-btn {
+  background: var(--cat-blue);
+  color: #fff;
+}
+
+[data-theme="calmed-light"] .b-submit-btn:hover {
+  background: #3367d6;
+}
+
+[data-theme="calmed-light"] ::-webkit-scrollbar-thumb {
+  background: rgba(31, 27, 22, .14);
 }

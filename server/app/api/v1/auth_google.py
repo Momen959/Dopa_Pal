@@ -19,18 +19,33 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Authentication"])
 
-# --- Load Google OAuth credentials from client_secret.json ---
+# --- Load Google OAuth credentials from client_secret.json or env vars ---
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 _SECRET_PATH = os.path.join(_PROJECT_ROOT, "secret", "client_secret.json")
 
-with open(_SECRET_PATH) as f:
-    _web = json.load(f)["web"]
+# Try loading from file first, then fall back to env vars
+_web_loaded = False
+try:
+    with open(_SECRET_PATH) as f:
+        _web = json.load(f)["web"]
+        _web_loaded = True
+except (FileNotFoundError, KeyError, json.JSONDecodeError):
+    logger.info("Google client_secret.json not found at %s — falling back to env vars.", _SECRET_PATH)
+    _web = None
 
-GOOGLE_CLIENT_ID = _web["client_id"]
-GOOGLE_CLIENT_SECRET = _web["client_secret"]
-GOOGLE_REDIRECT_URI = _web["redirect_uris"][0]
-GOOGLE_AUTH_URI = _web["auth_uri"]
-GOOGLE_TOKEN_URI = _web["token_uri"]
+if _web_loaded:
+    GOOGLE_CLIENT_ID = _web["client_id"]
+    GOOGLE_CLIENT_SECRET = _web["client_secret"]
+    GOOGLE_REDIRECT_URI = _web["redirect_uris"][0]
+    GOOGLE_AUTH_URI = _web["auth_uri"]
+    GOOGLE_TOKEN_URI = _web["token_uri"]
+else:
+    from app.core.config import settings
+    GOOGLE_CLIENT_ID = settings.GOOGLE_CLIENT_ID or ""
+    GOOGLE_CLIENT_SECRET = settings.GOOGLE_CLIENT_SECRET or ""
+    GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/v1/auth/google/callback")
+    GOOGLE_AUTH_URI = "https://accounts.google.com/o/oauth2/v2/auth"
+    GOOGLE_TOKEN_URI = "https://oauth2.googleapis.com/token"
 
 GOOGLE_SCOPES = " ".join([
     "https://www.googleapis.com/auth/calendar.readonly",
@@ -51,6 +66,9 @@ class OAuthUrlResponse(BaseModel):
 
 @router.get("/auth/google/url", response_model=OAuthUrlResponse)
 def get_google_auth_url(db: Session = Depends(get_db)):
+    if not GOOGLE_CLIENT_ID:
+        return OAuthUrlResponse(url="about:blank")  # Google not configured
+
     user = get_or_create_default_user(db)
     state = secrets.token_urlsafe(32)
     _oauth_states[state] = user.id

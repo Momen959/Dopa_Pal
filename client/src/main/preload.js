@@ -18,6 +18,4 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onOpenAddMenu: (callback) => ipcRenderer.on('open-add-menu', callback),
   setIgnoreMouse: (ignore) => ipcRenderer.send('set-ignore-mouse', ignore),
   startGoogleOAuth: () => ipcRenderer.invoke('start-google-oauth'),
-  startNotionOAuth: () => ipcRenderer.invoke('start-notion-oauth'),
-  startJiraOAuth: () => ipcRenderer.invoke('start-jira-oauth'),
 });

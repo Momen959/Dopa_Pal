@@ -306,106 +306,6 @@ ipcMain.handle('start-google-oauth', async () => {
   });
 });
 
-/* ── Notion OAuth ──────────────────────────────────────── */
-ipcMain.handle('start-notion-oauth', async () => {
-  const res = await fetch(apiUrl('/auth/notion/url'));
-  if (!res.ok) return { success: false, error: 'Could not reach backend.' };
-  const { url } = await res.json();
-
-  if (!url) return { success: false, error: 'Notion OAuth is not configured on the server.' };
-
-  return new Promise((resolve) => {
-    const authWin = new BrowserWindow({
-      width: 600, height: 700,
-      title: 'Connect Notion',
-      webPreferences: { nodeIntegration: false, contextIsolation: true },
-    });
-
-    let done = false;
-
-    authWin.webContents.on('page-title-updated', async (event, title) => {
-      if (title === 'dopapal-oauth-success') {
-        event.preventDefault();
-        if (done) return;
-        done = true;
-        if (!authWin.isDestroyed()) authWin.close();
-        resolve({ success: true });
-      }
-      if (title === 'dopapal-oauth-error') {
-        event.preventDefault();
-        if (done) return;
-        done = true;
-        let errorMsg = 'Connection failed';
-        try {
-          if (!authWin.isDestroyed()) {
-            errorMsg = await authWin.webContents.executeJavaScript(
-              'document.querySelector("p")?.textContent || "Unknown error"'
-            );
-          }
-        } catch {}
-        if (!authWin.isDestroyed()) authWin.close();
-        resolve({ success: false, error: errorMsg });
-      }
-    });
-
-    authWin.on('closed', () => {
-      if (!done) { done = true; resolve({ success: false, error: 'Authorization window closed.' }); }
-    });
-
-    authWin.loadURL(url);
-  });
-});
-
-/* ── Jira OAuth ──────────────────────────────────────── */
-ipcMain.handle('start-jira-oauth', async () => {
-  const res = await fetch(apiUrl('/auth/jira/url'));
-  if (!res.ok) return { success: false, error: 'Could not reach backend.' };
-  const { url } = await res.json();
-
-  if (!url) return { success: false, error: 'Jira OAuth is not configured on the server.' };
-
-  return new Promise((resolve) => {
-    const authWin = new BrowserWindow({
-      width: 600, height: 700,
-      title: 'Connect Jira',
-      webPreferences: { nodeIntegration: false, contextIsolation: true },
-    });
-
-    let done = false;
-
-    authWin.webContents.on('page-title-updated', async (event, title) => {
-      if (title === 'dopapal-oauth-success') {
-        event.preventDefault();
-        if (done) return;
-        done = true;
-        if (!authWin.isDestroyed()) authWin.close();
-        resolve({ success: true });
-      }
-      if (title === 'dopapal-oauth-error') {
-        event.preventDefault();
-        if (done) return;
-        done = true;
-        let errorMsg = 'Connection failed';
-        try {
-          if (!authWin.isDestroyed()) {
-            errorMsg = await authWin.webContents.executeJavaScript(
-              'document.querySelector("p")?.textContent || "Unknown error"'
-            );
-          }
-        } catch {}
-        if (!authWin.isDestroyed()) authWin.close();
-        resolve({ success: false, error: errorMsg });
-      }
-    });
-
-    authWin.on('closed', () => {
-      if (!done) { done = true; resolve({ success: false, error: 'Authorization window closed.' }); }
-    });
-
-    authWin.loadURL(url);
-  });
-});
-
 /* ── App lifecycle ─────────────────────────────────────── */
 app.on('second-instance', () => {
   // If second instance tries to open, focus the dashboard or bubble
@@ -478,6 +378,7 @@ app.whenReady().then(() => {
     app.setAppUserModelId('DopaPal.App');
   }
   createBubble();
+  createDashboard();
   startNotificationSystem();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createBubble();

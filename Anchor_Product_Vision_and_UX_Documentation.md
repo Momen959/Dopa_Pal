@@ -73,6 +73,37 @@ This section walks the flowchart you provided node by node, with the corrected l
 
 **User State Evaluation.** All seven signals from §3.3 (wake/startup delta, app startup time, emotional state, energy, pre-startup work, optional reason for low state, user history) feed into a single state score.
 
+**The State Score — How It's Represented.** No number is ever shown to the user, on either surface. The score is a single breathing dot whose color and pulse speed/brightness shift with the tier. This is "energy scales depth, never density" applied to the system's own internal state — even the meta-information about how the user is doing doesn't become a data point they have to read.
+
+- Low tier: Coral, dim, slow (~6s cycle) — smallest possible step ("open the doc").
+- Mid tier: Blue, standard, medium (~4s cycle) — one normal-weight task.
+- High tier: Amber, bright, fast (~2.6s cycle) — one task, more demanding, + up to one optional bonus.
+
+The dot's color doubles as a preview of the category of what's coming next — one glance answers "how am I doing" and "what kind of thing is next" simultaneously, at zero added visual cost.
+
+**The Bubble — Component Spec.**
+
+- Resting state: 64px circle, white fill, soft shadow, centered breathing dot (§4). Click → expands to the task card. That is its only interaction.
+- Mood check (once per app boot): replaces the resting bubble on first open of the day. One question, five tappable emoji pips (😴 😕 😐 🙂 😄), zero text input. Selecting a pip auto-advances to the task card after ~380ms — long enough to register the tap, short enough not to feel laggy. Never blocks: if dismissed or left unanswered, fall back to the last known state score rather than stalling the app.
+
+**Task card — element order (deliberate; do not reorder)**
+
+- Status row — small dot in the current category color + "Right now" label + a collapse (×) button. This is the only chrome on the card.
+- Category chip — colored pill: dot + label ("Focus task" / "Momentum task" / "Needs a nudge" / "Bonus task"), tinted background in that category's color. Sets the color mood for the whole card.
+- Task sentence — 22px/700, the single largest, highest-contrast element on the card by design.
+- Time estimate — small, muted, icon + duration. No deadline countdown here — that information lives only on the Dashboard.
+- Complete button — full-width, filled in the current task's category color (a blue task gets a blue button, an amber task an amber button). On completion the reward state always shows green, regardless of the task's original color, since green's job is exclusively "this finished."
+- Bonus row (high-energy only) — filled purple-tint block, maximum one item, labeled "Bonus" so it never reads as a second mandatory task.
+- Voice / Highlight intake buttons — always present, low-emphasis, so the zero-typing paths are never more than one click away even mid-task.
+- Focus Mode toggle — bottom-most, smallest element on the card. A feature, not a focal point.
+- Audio mini-control (new — see §7.3) — a single small icon sitting beside the Focus Mode toggle. Same visual weight class: present, but never competing with the task sentence above it.
+
+**Reward card.** Replaces the task card on completion; auto-returns to resting after ~2.6 seconds — no manual dismiss required, since that would be one more decision point than this product should ever ask for. Visual: soft green glow + checkmark pop animation.
+
+Copy and the presence of an Interest Vault fact must be variable — never identical twice in a row. Rotate between multiple copy variants, and include a vault fact only some of the time. Fixed, identical reward text is what makes a reward system start to feel mechanical and stop functioning as a dopamine cue.
+
+**Empty queue card.** Replaces the task card when the sub-block queue is empty. Never an empty input field. Mirrors the task card's structure (status row → chip → sentence → CTA) but every colored element uses coral, and the sentence is phrased as a yes/no question pulled from passively gathered material — for example, "Your Database Systems course posted a new assignment yesterday — want me to turn it into a plan?" One CTA only. No free-text field anywhere on this card.
+
 **High Score branch.** In the original flow this led to "give many tasks." In the corrected system, a high score never increases how many things are *visible* — it increases how demanding the single primary task is allowed to be, and unlocks up to two optional bonus items the user can choose to chase if they want to ride the momentum. The bubble still shows one thing first.
 
 **Low Score branch → "Less Tasks."** This stays intact: a low score genuinely restricts the system to the smallest, lowest-friction version of the next step — sometimes as small as "open the document" with no actual content work attached yet.
@@ -105,7 +136,49 @@ Underneath the bubble, six cooperating engines do the actual work. None of them 
 
 ---
 
-## 6. Who It's For
+## 6. The Dashboard — Component Spec
+
+Opened deliberately, not encountered passively — the only surface where the user sees the full picture rather than one task.
+
+### 6.1 Layout
+
+Fixed sidebar (~232px, white background) + scrollable main area. Three nav destinations: Task Map, Shop, Integrations. Resist adding more without strong reason — this is already the most information-dense surface in the product.
+
+### 6.2 State chip (top-right of Task Map)
+
+Same dot/color logic as the bubble's resting state, labeled in plain language ("Good morning energy," never a number). Keeps both surfaces visually speaking the same dialect.
+
+### 6.3 Task lanes — not a kanban grid
+
+A kanban board visually implies "look at everything at once," which fights the core promise. A horizontal lane per parent task lets the user scan top-to-bottom at their own pace instead.
+
+Each lane, top to bottom:
+
+- Icon + title + relatively-phrased deadline ("Due in 3 weeks" — never a bare hard date as the primary read)
+- A category chip for the PINCH tag — Interesting → purple, Familiar → blue, New → coral. This is where the "vibrant across tasks" feeling shows up most, since the dashboard is the one surface displaying several tasks at once.
+- Sub-block chips, horizontally wrapped — completed ones dimmed with a filled check, the active one bordered in the lane's category color, future ones neutral. This is read-only context, not something worked through top-to-bottom — the bubble remains the only place work actually happens.
+- Pacing slider — draggable handle and fill-track colored to match the lane's category, with a live readout. No numeric date-picker as the primary control; dragging to feel time visually compress or stretch is the default interaction. A precise-date entry can exist behind a secondary "edit exact date" affordance if needed, but it is never the first thing offered.
+
+### 6.4 "Quietly absorbed" section
+
+A visually de-emphasized lane (reduced opacity, no urgency styling) showing a missed block that has been silently redistributed. Exists specifically so the no-shame principle is visible, not just claimed in copy. Not interactive, no CTA — a passive confirmation only.
+
+### 6.5 Shop
+
+The Shop is where completion points get spent. It holds whatever purchasable categories the system already defines (themes, cosmetic unlocks, etc.) plus Audio Lab (§7) as a new category alongside them — not a replacement for what's already there, not a separate top-level surface.
+
+- Theme swatches double as the category palette itself — unlocked themes are literally blue / green / amber / coral / purple. Locked themes show a lock glyph at reduced opacity with a one-line note on what unlocks next. No countdown timer, no progress bar — a meter can read as pressure, which this surface must never create.
+- Streak — one large number in amber (its established job throughout the system), with a plain-language caption. This is the place to say the no-shame rule out loud once, in copy ("Thursday's gap didn't count against you") — appropriate here because the user is specifically choosing to look at their own history.
+- Interest Vault — chronological, most recent first, second-person register ("From today: …"). Each entry carries a small colored dot matching its source task's category, turning the list into a quick visual scan rather than a uniform wall of text.
+- Audio Lab — see §7 for full spec. Sits as its own labeled subsection within the Shop, using the same card/grid pattern as the theme swatches so the whole Shop reads as one consistent shelf of purchasable things, not a patchwork of different UI styles bolted together.
+
+### 6.6 Integrations
+
+Plain rows: icon, name, last-synced timestamp or "Not connected," one action button. No color-coding needed here — this is the one panel that's intentionally neutral, since connection status isn't a task category.
+
+---
+
+## 7. Who It's For
 
 **Mariam**, a university student, has a mind that runs on hyperfocus and crash cycles. She can disappear into a project for six hours straight or be completely unable to start one for three days, with no in-between. Conventional planners assume steady daily effort; Anchor's pacing engine instead treats her output as naturally uneven and just makes sure the *sum* of sub-blocks lands before the deadline, regardless of which days she actually does the work.
 
@@ -113,7 +186,7 @@ Underneath the bubble, six cooperating engines do the actual work. None of them 
 
 ---
 
-## 7. A Day in the Life
+## 8. A Day in the Life
 
 **A good morning.** Mariam wakes up, unlocks her phone forty seconds later, opens Anchor almost immediately after. The Dopamine Shield never even had a chance to engage — the gap was too small to register as avoidance. The one-tap mood check comes back high. The bubble doesn't throw a list at her; it shows one task — "Draft the literature review intro, 45 minutes" — with a second, optional bonus item faintly visible underneath in case she wants to chain into it. She does. Forty minutes later she taps complete on the first, and a new accent color unlocks across the whole interface. She keeps going into the bonus item without ever having to consciously decide to "do more work" — the system just made staying easier than stopping.
 

@@ -3,6 +3,8 @@ import './Bubble.css';
 import api from '../../services/api';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { applyTheme, getActiveThemeId } from '../../themes';
+import { createAudioPlayer } from '../AudioLab/audioEngine';
+
 
 /* ─── Detect Electron ───────────────────────────────────── */
 const IS_ELECTRON = typeof window !== 'undefined' && !!window.electronAPI;
@@ -54,6 +56,7 @@ const HomeIcon = () => <Svg><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2
 const PlusIcon = () => <Svg><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" /></Svg>;
 const SparkleIcon = () => <Svg><path d="M12 3l1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5z" /></Svg>;
 const MicIcon = () => <Svg><rect x="9" y="3" width="6" height="10" rx="3" /><path d="M5 10a7 7 0 0 0 14 0" /><line x1="12" y1="20" x2="12" y2="22" /><line x1="8" y1="22" x2="16" y2="22" /></Svg>;
+const SpeakerIcon = () => <Svg><polygon points="5 8 9 8 13 4 13 20 9 16 5 16" /><path d="M15.5 8.5a3.5 3.5 0 0 1 0 7" /><path d="M18 5a6 6 0 0 1 0 14" /></Svg>;
 const PenIcon = () => <Svg><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" /></Svg>;
 const ClipboardIcon = () => <Svg><rect x="8" y="2" width="8" height="4" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /></Svg>;
 const CloseIcon = () => <Svg size={11}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></Svg>;
@@ -64,7 +67,7 @@ const PlayIcon = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="cur
 /* ─── Main Bubble ───────────────────────────────────────── */
 export default function Bubble() {
   const { t } = useLanguage();
-  const [view, setView] = useState('icon'); // icon|panel|addMenu|voice|aiSummary|manual|play
+  const [view, setView] = useState('icon'); // icon|panel|addMenu|voice|aiSummary|manual|play|task|mood|reward|empty
   const [panelAnim, setPanelAnim] = useState('');
   const [panelSide, setPanelSide] = useState('left');
   const [recording, setRecording] = useState(false);
@@ -72,6 +75,17 @@ export default function Bubble() {
   const [aiText, setAiText] = useState('');
   const [summaryData, setSummaryData] = useState(null);
   const [userXp, setUserXp] = useState(0);
+  const [bubbleTask, setBubbleTask] = useState(null);
+  const [stateScore, setStateScore] = useState(75);
+  const [focusMode, setFocusMode] = useState(true);
+  const [audioMuted, setAudioMuted] = useState(false);
+  const [activeMusic, setActiveMusic] = useState('none');
+  const [audioVolume, setAudioVolume] = useState(0.55);
+  const [rewardCopy, setRewardCopy] = useState('');
+  const audioCtxRef = useRef(null);
+  const audioPlayerRef = useRef(null);
+  const [moodScore, setMoodScore] = useState(null);
+  const [moodCheckedToday, setMoodCheckedToday] = useState(false);
   const [playSession, setPlaySession] = useState(null);
   const [playSummary, setPlaySummary] = useState(null);
   const [playDraftDurations, setPlayDraftDurations] = useState({});
@@ -103,9 +117,69 @@ export default function Bubble() {
     }
   }, []);
 
+  const stateTier = stateScore < 40 ? 'low' : stateScore < 70 ? 'mid' : 'high';
+  const stateDotClass = `b-state-dot b-state-dot--${stateTier}`;
+  const currentBlock = bubbleTask?.primary_block || null;
+  const bonusBlock = bubbleTask?.bonus_blocks?.[0] || null;
+  const taskCategory = stateTier === 'low' ? 'coral' : stateTier === 'mid' ? 'blue' : 'amber';
+  const taskCategoryLabel = stateTier === 'low' ? 'Needs a nudge' : stateTier === 'mid' ? 'Focus task' : 'Momentum task';
+
+  const saveMood = async (score) => {
+    const today = new Date().toISOString().slice(0, 10);
+    setMoodScore(score);
+    localStorage.setItem('dopapal_mood_date_v1', today);
+    localStorage.setItem('dopapal_last_mood_v1', String(score));
+    setMoodCheckedToday(true);
+    try {
+      await api.submitMood(score);
+    } catch { }
+    setTimeout(() => goTo(currentBlock ? 'task' : 'empty'), 380);
+  };
+
+  const completeCurrentBlock = async () => {
+    if (!currentBlock) return;
+    setIsLoading(true);
+    try {
+      await api.completeSubBlock(currentBlock.sub_block_id);
+      setRewardCopy([
+        'Done. Anchor is reshuffling the next step.',
+        'Nice. The next move is being queued quietly.',
+        'Complete. The load just got lighter.',
+      ][Math.floor(Math.random() * 3)]);
+      goTo('reward');
+      setTimeout(async () => {
+        const next = await api.getNextBubbleTask().catch(() => null);
+        setBubbleTask(next);
+        setStateScore(Number(next?.state_score ?? stateScore));
+        goTo(next?.primary_block ? 'task' : 'empty');
+      }, 2600);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     const savedXp = localStorage.getItem('dopapal_xp_v3');
     if (savedXp) setUserXp(parseInt(savedXp, 10));
+
+    const loadAudioPrefs = () => {
+      const savedMusic = localStorage.getItem('dopapal_active_music_v1') || 'none';
+      const savedVolume = parseFloat(localStorage.getItem('dopapal_audio_volume_v1') || '0.55');
+      setActiveMusic(savedMusic);
+      setAudioVolume(Number.isNaN(savedVolume) ? 0.55 : savedVolume);
+    };
+
+    loadAudioPrefs();
+    const handleStorage = (event) => {
+      if (event.key === 'dopapal_active_music_v1' && event.newValue) {
+        setActiveMusic(event.newValue);
+      }
+      if (event.key === 'dopapal_audio_volume_v1') {
+        const nextVolume = parseFloat(event.newValue || '0.55');
+        setAudioVolume(Number.isNaN(nextVolume) ? 0.55 : nextVolume);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
 
     const savedPlay = localStorage.getItem('dopapal_play_state_v1');
     if (savedPlay) {
@@ -117,12 +191,34 @@ export default function Bubble() {
       }
     }
 
+    const today = new Date().toISOString().slice(0, 10);
+    const moodDate = localStorage.getItem('dopapal_mood_date_v1');
+    setFocusMode(localStorage.getItem('dopapal_focus_mode_v1') !== '0');
+    setAudioMuted(localStorage.getItem('dopapal_audio_muted_v1') === '1');
+    setMoodScore(Number(localStorage.getItem('dopapal_last_mood_v1') || 0) || null);
+    setMoodCheckedToday(moodDate === today);
+
+    api.getNextBubbleTask().then(next => {
+      setBubbleTask(next);
+      setStateScore(Number(next?.state_score ?? 75));
+      if (!moodDate || moodDate !== today) {
+        setView('mood');
+      } else if (next?.primary_block) {
+        setView('task');
+      } else {
+        setView('empty');
+      }
+    }).catch(() => { });
+
     if (IS_ELECTRON && window.electronAPI.onOpenAddMenu) {
       window.electronAPI.onOpenAddMenu(() => {
         goTo('addMenu');
       });
     }
-    return () => clearTimeout(exitTmr.current);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearTimeout(exitTmr.current);
+    };
   }, [goTo]);
 
   /* ── Apply active theme on mount & listen for changes ── */
@@ -133,6 +229,46 @@ export default function Bubble() {
     const interval = setInterval(handler, 3000);
     return () => { window.removeEventListener('storage', handler); clearInterval(interval); };
   }, []);
+
+  useEffect(() => {
+    if (audioMuted || !activeMusic || activeMusic === 'none') {
+      audioPlayerRef.current?.stop();
+      audioPlayerRef.current = null;
+      return;
+    }
+
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume();
+    }
+
+    const spec = activeMusic;
+
+    if (audioPlayerRef.current?.soundId !== activeMusic) {
+      audioPlayerRef.current?.stop();
+      audioPlayerRef.current = createAudioPlayer(audioCtxRef.current, spec, audioVolume);
+      if (audioPlayerRef.current) audioPlayerRef.current.soundId = activeMusic;
+    } else if (audioPlayerRef.current) {
+      audioPlayerRef.current.setVolume(audioVolume);
+    }
+
+    return () => {
+      audioPlayerRef.current?.stop();
+      audioPlayerRef.current = null;
+    };
+  }, [activeMusic, audioMuted, audioVolume]);
+
+  useEffect(() => {
+    const poll = setInterval(() => {
+      const savedMusic = localStorage.getItem('dopapal_active_music_v1') || 'none';
+      const savedVolume = parseFloat(localStorage.getItem('dopapal_audio_volume_v1') || '0.55');
+      if (savedMusic !== activeMusic) setActiveMusic(savedMusic);
+      if (!Number.isNaN(savedVolume) && savedVolume !== audioVolume) setAudioVolume(savedVolume);
+    }, 2200);
+    return () => clearInterval(poll);
+  }, [activeMusic, audioVolume]);
 
   useEffect(() => {
     if (!playSession?.current || playSession.stage !== 'running') return;
@@ -203,7 +339,7 @@ export default function Bubble() {
   const buildPlayQueue = useCallback((next) => {
     const queue = [
       ...(next?.primary_block ? [next.primary_block] : []),
-      ...(next?.bonus_blocks || []),
+      ...(next?.bonus_blocks || []).slice(0, 1),
     ];
 
     return queue.map((item, index) => {
@@ -528,7 +664,7 @@ export default function Bubble() {
       const duration = Date.now() - recordingStartTime.current;
       const totalBytes = audioChunks.current.reduce((sum, c) => sum + c.size, 0);
       console.log('[Voice] Recording stopped. Duration:', duration, 'ms | Chunks:', audioChunks.current.length, '| Total bytes:', totalBytes);
-      
+
       if (audioChunks.current.length === 0) {
         console.warn('[Voice] No audio chunks recorded');
         setRecording(false);
@@ -568,7 +704,7 @@ export default function Bubble() {
 
       const result = await response.json();
       console.log('[Voice] Ingestion successful:', result);
-      
+
       // Reset forms and navigate back
       setTask({ title: '', duration: '', due: '', notes: '' });
       setAiText('');
@@ -593,8 +729,108 @@ export default function Bubble() {
   /* ── Render ──────────────────────────────────────────── */
   return (
     <div className="b-root" onMouseDownCapture={beginBubbleDrag}>
+      {view === 'mood' && (
+        <div className="b-panel b-panel--tall b-panel--mood" data-no-drag>
+          <div className="b-status-row">
+            <span className={stateDotClass} />
+            <span>Morning check-in</span>
+            <button className="b-close" onClick={() => goTo(currentBlock ? 'task' : 'empty')}><CloseIcon /></button>
+          </div>
+          <div className="b-menu-title">How are you feeling?</div>
+          <div className="b-mood-pips">
+            {[1, 2, 3, 4, 5].map(score => (
+              <button key={score} className="b-mood-pip" onClick={() => saveMood(score)}>{score}</button>
+            ))}
+          </div>
+          <button className="b-text-link" onClick={() => goTo(currentBlock ? 'task' : 'empty')}>Skip for now</button>
+        </div>
+      )}
 
       {/* ━━━━━━━━ ORBITAL MENU ━━━━━━━━ */}
+      {view === 'task' && currentBlock && (
+        <div className="b-panel b-panel--tall b-panel--task" data-no-drag>
+          <div className="b-status-row">
+            <span className={stateDotClass} />
+            <span>Right now</span>
+            <button className="b-close" onClick={() => goTo('icon')}><CloseIcon /></button>
+          </div>
+          <div className={`b-category-chip b-category-chip--${taskCategory}`}>
+            <span className="b-category-chip-dot" />
+            <span>{taskCategoryLabel}</span>
+          </div>
+          <div className="b-task-sentence">{currentBlock.block_title || currentBlock.task_title}</div>
+          <div className="b-task-meta">⏱ {currentBlock.duration_minutes} min</div>
+          <button className="b-task-complete" onClick={completeCurrentBlock} disabled={isLoading}>Complete</button>
+          {stateTier === 'high' && bonusBlock && (
+            <div className="b-bonus-row">
+              <span className="b-bonus-label">Bonus</span>
+              <span className="b-bonus-text">{bonusBlock.block_title || bonusBlock.task_title}</span>
+            </div>
+          )}
+          <div className="b-intake-row">
+            <button className="b-mini-action" onClick={() => goTo('voice')}>Voice</button>
+            <button className="b-mini-action" onClick={() => goTo('addMenu')}>Highlight</button>
+          </div>
+          <div className="b-card-footer">
+            <button className="b-mini-toggle" onClick={() => { const next = !focusMode; setFocusMode(next); localStorage.setItem('dopapal_focus_mode_v1', next ? '1' : '0'); }}>
+              Focus Mode
+            </button>
+            {/* Bubble mini-player: only visible when audio is playing */}
+            {activeMusic && activeMusic !== 'none' && (
+              <div className={`b-mini-toggle b-mini-toggle--audio${audioMuted ? ' muted' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button onClick={() => { /* no play/skip here, just show and stop */ }} style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'default' }}><SpeakerIcon /></button>
+                <button onClick={() => setTab('audio-lab')} style={{ background: 'transparent', border: 'none', color: 'var(--text)', cursor: 'pointer' }}>{(() => {
+                  const builtinNames = {
+                    'music-brown-noise': 'Deep Brown Noise',
+                    'music-lofi': 'Lo-fi Focus Loop',
+                    'music-rain': 'Rain Desk'
+                  };
+                  const getMixLabel = () => {
+                    if (typeof activeMusic === 'string' && activeMusic.startsWith('mix:')) {
+                      try {
+                        const mixes = JSON.parse(window.localStorage.getItem('dopaPal_customMixes') || '[]');
+                        const mix = mixes.find(m => m.id === activeMusic.slice(4));
+                        return mix?.name || activeMusic;
+                      } catch (_err) {
+                        return activeMusic;
+                      }
+                    }
+                    return activeMusic;
+                  };
+                  const label = builtinNames[activeMusic] || getMixLabel();
+                  return (label || '').length > 18 ? (label || '').slice(0, 17) + '…' : (label || '');
+                })()}</button>
+                <button onClick={() => { setActiveMusic('none'); localStorage.setItem('dopapal_active_music_v1', 'none'); }} style={{ background: 'transparent', border: 'none', color: 'var(--text3)', cursor: 'pointer' }} title="Stop">■</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {view === 'reward' && (
+        <div className="b-panel b-panel--tall b-panel--reward" data-no-drag>
+          <div className="b-reward-glow">✓</div>
+          <div className="b-menu-title">Completed</div>
+          <div className="b-menu-sub">{rewardCopy}</div>
+        </div>
+      )}
+
+      {view === 'empty' && (
+        <div className="b-panel b-panel--tall b-panel--empty" data-no-drag>
+          <div className="b-status-row">
+            <span className="b-state-dot b-state-dot--low" />
+            <span>Needs a nudge</span>
+            <button className="b-close" onClick={() => goTo('icon')}><CloseIcon /></button>
+          </div>
+          <div className="b-category-chip b-category-chip--coral">
+            <span className="b-category-chip-dot" />
+            <span>Ambient suggestion</span>
+          </div>
+          <div className="b-task-sentence">Your queue is empty. Want me to turn something passive into a plan?</div>
+          <button className="b-task-complete" onClick={() => goTo('addMenu')}>Add from voice or highlight</button>
+        </div>
+      )}
+
       {(view === 'panel') && (
         <div className={`b-ow b-ow--${panelSide} b-ow--${panelAnim}`} data-no-drag>
           <button className="b-ob b-ob--0" data-label="Home" id="btn-home" onClick={() => { goTo('icon'); if (IS_ELECTRON) window.electronAPI.openDashboard(); }}><HomeIcon /></button>
@@ -819,27 +1055,29 @@ export default function Bubble() {
               </div>
 
               <div className="b-play-queue">
-                {playSession.queue.map((item, index) => (
-                  <div key={item.sub_block_id ?? index} className={`b-play-queue-row ${index === 0 ? 'b-play-queue-row--primary' : ''}`}>
-                    <div className="b-play-queue-main">
-                      <div className="b-play-queue-title">{item.block_title || item.task_title}</div>
-                      <div className="b-play-queue-meta">{item.block_title ? item.task_title : `Block ${index + 1}`}</div>
+                {(() => {
+                  const item = playSession.queue[0];
+                  const index = 0;
+                  return (
+                    <div key={item.sub_block_id ?? index} className="b-play-queue-row b-play-queue-row--primary">
+                      <div className="b-play-queue-main">
+                        <div className="b-play-queue-title">{item.block_title || item.task_title}</div>
+                        <div className="b-play-queue-meta">{item.block_title ? item.task_title : `Top Priority Block`}</div>
+                      </div>
+                      <div className="b-play-queue-controls">
+                        <input
+                          className="b-play-duration-input"
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={playDraftDurations[String(item.sub_block_id ?? index)] ?? item.original_minutes}
+                          onChange={e => updatePlayDuration(item.sub_block_id ?? index, e.target.value)}
+                        />
+                        <span className="b-play-queue-unit">min</span>
+                      </div>
                     </div>
-                    <div className="b-play-queue-controls">
-                      <input
-                        className="b-play-duration-input"
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={playDraftDurations[String(item.sub_block_id ?? index)] ?? item.original_minutes}
-                        onChange={e => updatePlayDuration(item.sub_block_id ?? index, e.target.value)}
-                      />
-                      <span className="b-play-queue-unit">min</span>
-                      <button className="b-mini-btn" onClick={() => shiftPlayQueue(index, -1)} disabled={index === 0}>↑</button>
-                      <button className="b-mini-btn" onClick={() => shiftPlayQueue(index, 1)} disabled={index === playSession.queue.length - 1}>↓</button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })()}
               </div>
 
               <div className="b-play-actions">
@@ -893,13 +1131,9 @@ export default function Bubble() {
                   <strong>{playSummary.netXp}</strong>
                 </div>
               </div>
-              <div className="b-play-summary-list">
-                {playSummary.blocks.map(block => (
-                  <div key={block.sub_block_id} className="b-play-summary-row">
-                    <span>{block.task_title}</span>
-                    <span>{formatClock(block.actualSeconds ?? (block.original_minutes * 60))}</span>
-                  </div>
-                ))}
+              <div className="b-play-summary-list" style={{ textAlign: 'center', padding: '16px' }}>
+                <p style={{ color: 'var(--text-white)', fontSize: '15px', fontWeight: 600 }}>Great job!</p>
+                <p style={{ color: 'var(--text3)', fontSize: '13px', marginTop: '4px' }}>You stayed focused and completed your session successfully.</p>
               </div>
               <div className="b-play-actions">
                 <button className="b-submit-btn" onClick={() => { setPlaySummary(null); startPlayMode(); }}>Replay</button>
@@ -922,6 +1156,7 @@ export default function Bubble() {
       >
         <div className="b-ring" />
         <div className="b-ring" style={{ animationDelay: '.85s' }} />
+        <span className={stateDotClass} aria-hidden="true" />
         {showOrbTimer
           ? <span className={`b-orb-timer${orbOvertime ? ' b-orb-timer--over' : ''}`}>{formatClock(playSession.current.remaining_seconds)}</span>
           : <BrainIcon />}

@@ -47,18 +47,10 @@ def save_integration_config(
             existing.settings_json = settings
         token_entry = existing
     else:
-        # Seed default sync settings
+        # Seed default sync settings for Google
         merged_settings = settings or {}
         if provider == "google" and "sync_settings" not in merged_settings:
             merged_settings["sync_settings"] = DEFAULT_SYNC_SETTINGS
-        if provider == "notion":
-            from app.services.notion_service import DEFAULT_NOTION_SETTINGS
-            for k, v in DEFAULT_NOTION_SETTINGS.items():
-                merged_settings.setdefault(k, v)
-        if provider == "jira":
-            from app.services.jira_service import DEFAULT_JIRA_SETTINGS
-            for k, v in DEFAULT_JIRA_SETTINGS.items():
-                merged_settings.setdefault(k, v)
         token_entry = IntegrationToken(
             user_id=user_id,
             provider=provider,

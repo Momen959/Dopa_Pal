@@ -58,14 +58,6 @@ export const api = {
     const response = await apiClient.post(`/sub-blocks/${subBlockId}/complete`);
     return response.data;
   },
-  undoSubBlock: async (subBlockId) => {
-    const response = await apiClient.post(`/sub-blocks/${subBlockId}/undo`);
-    return response.data;
-  },
-  updateSubBlock: async (subBlockId, data) => {
-    const response = await apiClient.patch(`/sub-blocks/${subBlockId}`, data);
-    return response.data;
-  },
   getAISummary: async () => {
     const response = await apiClient.get('/bubble/summary');
     return response.data;
